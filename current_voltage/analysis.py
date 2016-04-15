@@ -19,10 +19,34 @@ class IV():
     }
 
     def __init__(self, I, V, measurement_type, area=1, temp=300):
+        self.load_IV(I, V, area, temp)
+        self.set_measurement_type(measurement_type)
+
+    def load_IV(self, I, V, area=1, temp=300):
+        '''
+        A function to provide the raw
+        IV data
+        '''
+        self.temp = temp
         self.J = I / area
         self.V = V
-        self.measurement_type = measurement_type
-        self.temp = temp
+        self._sort_IV()
+
+    def _sort_IV(self):
+        '''
+        A private function that ensures
+        that the voltage is increasing
+        '''
+        index = np.argsort(self.V)
+        self.J = self.J[index]
+        self.V = self.V[index]
+
+    def set_measurement_type(self, Type):
+        '''
+        A function to set the type of raw
+        measurement that was taken
+        '''
+        self.measurement_type = Type
 
     def set_model(self, model='circuit equivalent', **kwargs):
         '''

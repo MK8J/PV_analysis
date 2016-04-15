@@ -9,6 +9,65 @@ import cir_equiv_comp as comp
 import data_operations as do
 
 
+# To Do
+# there is an issue when fitting light Iv and Suns Voc
+# currently I have a weighted fit to the small current values
+# which is needed for dark IV fits, though this
+# is not the case for light IV and Suns Voc. Hence, the problem
+
+def _terminal_to_junction_voltage(Vt, J, comps_used, Vj_g_Vt):
+    '''
+    coverts the terminal voltage to the junction voltage
+    just helps you make sure your not making a mistake
+
+    inputs:
+        Vt: (array)
+            terminal voltage
+        J: (array)
+            terminal current
+        comps_used: (dic)
+            a dictionary of the components used
+
+    outputs:
+        Vj: (array)
+            the junction voltage
+    '''
+
+    # check if there is a series component else ignore
+    if 'series' in comps_used:
+        Vj = Vt - (-1)**(Vj_g_Vt) * \
+            comps_used['series'].voltage(np.abs(J))
+    else:
+        Vj = np.copy(Vt)
+    return Vj
+
+
+def _junction_to_terminal_voltage(Vj, J, comps_used, Vj_g_Vt):
+    '''
+    coverts the junction voltage to the terminal voltage
+    just helps you make sure your not making a mistake
+
+    inputs:
+        Vj: (array)
+            terminal voltage
+        J: (array)
+            terminal current
+        comps_used: (dic)
+            a dictionary of the components used
+
+    outputs:
+        Vt: (array)
+            the junction voltage
+    '''
+    # check if there is a series component else ignore
+    if 'series' in comps_used:
+        Vt = Vj + (-1)**(Vj_g_Vt) * \
+            comps_used['series'].voltage(np.abs(J))
+    else:
+        Vt = np.copy(Vj)
+    return Vt
+
+
 class _general_JV():
     '''
     A base class for simulating IV curves
@@ -35,7 +94,7 @@ class _general_JV():
         'nonideal_diode': {'J0': 1e-8, 'n': 2},
         'shunt': {'R': 1e3},
         'series': {'R': 1},
-        'lgt_gen_cur': {'J': 0.038},
+        'lgt_gen_cur': {'J': 0.040},
         'diode_res': {'J0': 1e-5, 'n': 2, 'R': 10}
         # 'reverse_doide': [1e-13],
         # 'transistor': [1e-8],
@@ -86,57 +145,6 @@ class _general_JV():
             handel.params = comp_vals[component]
 
         return comps_used
-
-    def _terminal_to_junction_voltage(self, Vt, J, comps_used):
-        '''
-        coverts the terminal voltage to the junction voltage
-        just helps you make sure your not making a mistake
-
-        inputs:
-            Vt: (array)
-                terminal voltage
-            J: (array)
-                terminal current
-            comps_used: (dic)
-                a dictionary of the components used
-
-        outputs:
-            Vj: (array)
-                the junction voltage
-        '''
-
-        # check if there is a series component else ignore
-        if 'series' in comps_used:
-            Vj = Vt - (-1)**(self.Vj_g_Vt) * \
-                comps_used['series'].voltage(np.abs(J))
-        else:
-            Vj = np.copy(Vt)
-        return Vj
-
-    def _junction_to_terminal_voltage(self, Vj, J, comps_used):
-        '''
-        coverts the junction voltage to the terminal voltage
-        just helps you make sure your not making a mistake
-
-        inputs:
-            Vj: (array)
-                terminal voltage
-            J: (array)
-                terminal current
-            comps_used: (dic)
-                a dictionary of the components used
-
-        outputs:
-            Vt: (array)
-                the junction voltage
-        '''
-        # check if there is a series component else ignore
-        if 'series' in comps_used:
-            Vt = Vj + (-1)**(self.Vj_g_Vt) * \
-                comps_used['series'].voltage(np.abs(J))
-        else:
-            Vt = np.copy(Vj)
-        return Vt
 
     def _check_comps(self, comps_used):
         '''
@@ -209,7 +217,7 @@ class _general_JV():
 
         V, J = self.IV_curve_2(V, ax=None, adjust=True, comp_vals=None)
 
-        Vj = self._terminal_to_junction_voltage(J, V, self.comps_used)
+        Vj = _terminal_to_junction_voltage(J, V, self.comps_used, self.Vj_g_Vt)
 
         for component, handle in self.comps_used.items():
             if component is not 'series':
@@ -295,7 +303,8 @@ class _general_JV():
 
         # add on the series voltage drop
         if 'series' in self.comps_used.keys():
-            Vt = self._junction_to_terminal_voltage(V, J, self.comps_used)
+            Vt = _junction_to_terminal_voltage(
+                V, J, self.comps_used, self.Vj_g_Vt)
 
         else:
             Vt = V
@@ -312,7 +321,6 @@ class _general_JV():
 
         note the output voltage differs from the input
         '''
-
 
         # if values are provided, send them to the components
         if comp_vals is not None:
@@ -335,8 +343,8 @@ class _general_JV():
                 J = np.zeros(V.shape)
 
                 # calculate voltage drop
-                Vj = self._terminal_to_junction_voltage(
-                    V, J_temp, self.comps_used)
+                Vj = _terminal_to_junction_voltage(
+                    V, J_temp, self.comps_used, self.Vj_g_Vt)
 
                 # get the current through the parallel components
                 J = self._IV_at_Vj(Vj)
@@ -441,7 +449,7 @@ class fitting_methods():
         self.Vj_g_Vt = model.Vj_g_Vt
         self.model = model
 
-        self.method_dic = {
+        self.fit_method_dic = {
             'least squares_b': self.least_squares,
             'least squares': self.linalg,
             'other': self.scipy_minimise,
@@ -451,7 +459,7 @@ class fitting_methods():
 
         method = method or self.default_method
         # try:
-        fitting = self.method_dic[method](J, V, self.model.comps_used)
+        fitting = self.fit_method_dic[method](J, V, self.model.comps_used)
         # except:
         #     print 'fit failed, who knows why'
         #     print 'returning starting values'
@@ -623,7 +631,7 @@ class fitting_methods():
 
         vals = iter(x0)
 
-        Vj = self._terminal_to_junction_voltage(V, J, comps_used)
+        Vj = _terminal_to_junction_voltage(V, J, comps_used, self.Vj_g_Vt)
 
         for component, handle in comps_used.items():
             if 'series' not in component:
@@ -703,12 +711,13 @@ class fitting_methods():
 
         vals = iter(params)
 
+        # if series is a parameter, determine its impact
         if 'series' in self.comps_used.keys():
             r = vals.next()
             self.comps_used['series'].params['R'] = r
-            Vj = V + (-1)**(self.Vj_g_Vt) * self.J * r
-        else:
-            Vj = np.copy(V)
+
+        Vj = _terminal_to_junction_voltage(
+            V, self.J, self.comps_used, self.Vj_g_Vt)
 
         for component, handle in self.comps_used.items():
             if 'series' != component:

@@ -1,6 +1,7 @@
 
 import numpy as np
 import scipy.constants as const
+import matplotlib.pylab as plt
 
 
 def Vt(temp=300):
@@ -53,7 +54,7 @@ def get_MPP(I, V, area=1):
 
     P = get_PV(I, V, area)
 
-    index = P == np.amax(P)
+    index = P == np.max(P)
 
     return abs(J[index][0]), V[index][0]
 
@@ -89,5 +90,3 @@ def get_Voc(I, V):
     Voc = np.interp(0, I, V)
 
     return Voc
-
-
