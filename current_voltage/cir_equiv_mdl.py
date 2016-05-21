@@ -424,6 +424,7 @@ class sudo_JV(_general_JV):
         'nonideal_diode': comp.diode(),
         'shunt': comp.resistor_parallel(),
         'lgt_gen_cur': comp.current_source(),
+        'diode_res': comp.diode_resistor(),
     }
 
     component = ['ideal_diode', 'nonideal_diode',

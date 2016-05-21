@@ -16,11 +16,13 @@ def get_mV(I, V, area=1, Jsc=0, temp=300):
     using the second order difference method
     '''
 
-    J = I / area
+    J = I / area + Jsc
 
-    dJdV = np.gradient(I, varargs=V[1] - V[0])
+    dlnJdV = np.gradient(np.log(J), varargs=V[1] - V[0])
 
-    m = (J + Jsc) / dJdV / Vt(temp)
+    # doing the derivative of the log, provides a slightly
+    # better noise reduction
+    m = 1. / dlnJdV / Vt(temp)
 
     return m
 
