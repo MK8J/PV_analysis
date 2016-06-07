@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pylab as plt
 import scipy.interpolate
 import scipy.fftpack as fft
-
+from scipy.signal import savgol_filter
 
 class PSF():
 
@@ -365,6 +365,9 @@ def TEST_PSF_Derivation():
 
     # differen LSF's
     LSF_0 = psf.LSF_from_data_diff(data)
+    # datam = savgol_filter(data, 51, 11)
+    # LSF_01 = np.gradient(datam)
+
     LSF_1 = psf.LSF_from_data_polyfit(data, 5)
     LSF_2 = psf.LSF_from_data_spline_peicemeal(data, 5)
 
@@ -378,7 +381,7 @@ def TEST_PSF_Derivation():
     ax_temp.plot(data['counts'] / data['counts'][0], 'k.-')
 
     # plot the FT of the ESF
-    psf._plot_FT_norm(datas['counts'], ax[1][0], norm=True)
+    psf._plot_FT_norm(data['counts'], ax[1][0], norm=True)
 
     # plot the LSF
     ax[0][1].plot(LSF_0 / np.amax(LSF_0), '.', label='Direct Derivative')
