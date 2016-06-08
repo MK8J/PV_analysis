@@ -24,7 +24,7 @@ def voltage2conductance(voltage, coil_constants, method='quad'):
 
     return convertion[method](voltage, coil_constants)
 
-def _voltage2conductance_sinton(V, coil_constants, method='Sinton'):
+def _voltage2conductance_sinton(V, coil_constants):
     '''
     assumes the constants provided follow
 
@@ -34,7 +34,7 @@ def _voltage2conductance_sinton(V, coil_constants, method='Sinton'):
 
     return (V-coil_constants['c'])**2*coil_constants['a'] +(V-coil_constants['c'])*coil_constants['b']
 
-def _voltage2conductance_quadratic(V, coil_constants, method='Sinton'):
+def _voltage2conductance_quadratic(V, coil_constants):
     '''
     assumes the constants provided follow
 
