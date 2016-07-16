@@ -84,7 +84,6 @@ def load_bti(fname, inf=None):
         except:
             print('Something went wrong with the auto data extraction')
 
-
     return image
 
 

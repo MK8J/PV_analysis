@@ -1,3 +1,4 @@
+
 import numpy as np
 import numpy.fft as fft
 import matplotlib.pylab as plt
@@ -54,5 +55,6 @@ def _derivative(nxc, I_pl, f_cutoff, t_step):
     plt.xlabel('Excess carrier density (cm$^{-3}$)')
     plt.ylabel('dpl/dn')
     plt.legend(loc=0)
+
 
     return cof[1]/cof[0]*2

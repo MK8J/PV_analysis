@@ -16,14 +16,14 @@ import skimage.filters as fil
 import skimage.restoration as res
 
 
-def deconvolve(image, psf, iterations=7, clip=True):
+def deconvolve(image, psf, iterations=7, clip=False):
     '''
     performs the Richardson-Lucy deconvolution
     '''
     # return res.unsupervised_wiener(image, psf)[0]
-    # return res.wiener(image, psf, balance=1, clip=clip)
+    return res.wiener(image, psf, balance=0.001, clip=clip, is_real=True, reg=0*np.sqrt(image))
     # print(iterations, clip)
-    return res.richardson_lucy(image, psf, iterations=iterations, clip=clip)
+    # return res.richardson_lucy(image, psf, iterations=iterations, clip=clip)
 
 
 def voltage_map(image, Ci, PL0=0, temp=300):
