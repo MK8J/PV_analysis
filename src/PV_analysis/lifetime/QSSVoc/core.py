@@ -66,7 +66,7 @@ class lifetime_Voc(LTC):
 
         # get dn
         self.nxc = Voc_2_deltan(
-            self.V, self.sample.doping, self.ni, self.sample.temp)
+            self.V, self.sample.doping, self.sample.ni_eff, self.sample.temp)
         # get gen
         self.gen = self.gen_V * self.Fs / self.sample.thickness \
             * self.sample.optical_c

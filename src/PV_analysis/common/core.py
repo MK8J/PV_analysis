@@ -1,5 +1,9 @@
 
 import numpy as np
+import numbers
+
+from semiconductor.material import IntrinsicCarrierDensity
+from semiconductor.material import BandGapNarrowing
 
 
 def Binning(data, BinAmount):
@@ -28,6 +32,34 @@ def Binning_Named(data, BinAmount):
     return data2
 
 
+def getvalue_modelornumber(value, model, extension, **kwargs):
+    '''
+    test is the provded value is a float or numpy array. If it is not,
+    it provides the value returned by model.extension()
+
+    inputs:
+        value:
+            the value to test
+        model:
+            the model to use if the value is a string
+        extension:
+            the function of the model to be called to find the desribed value
+        kwargs: (optional)
+            Values to be passed to the model's extension
+    '''
+    if isinstance(value, numbers.Number):
+        value = value
+    elif isinstance(value, np.ndarray):
+        value = value
+    elif hasattr(model, extension) and isinstance(value, str):
+        value = getattr(model, extension)(**kwargs)
+
+    else:
+        print('Incorrect type, or not a function')
+
+    return value
+
+
 class sample():
 
     name = None
@@ -37,7 +69,10 @@ class sample():
     absorptance = 1
     _Na = None
     _Nd = None
+    _ni = IntrinsicCarrierDensity().calculationdetails['author']
+    _nieff = BandGapNarrowing().calculationdetails['author']
     temp = 300  # as most measurements are done at room temperature
+    nxc = None
 
     def attrs(self, dic):
         '''
@@ -53,8 +88,10 @@ class sample():
         '''
         Returns the number of net dopants. This is not the ionised dopants
         '''
-
-        doping = abs(self._Na - self._Nd)
+        if self._Na is None or self._Nd is None:
+            doping = 0
+        else:
+            doping = abs(self._Na - self._Nd)
         return doping
 
     @doping.setter
@@ -64,7 +101,6 @@ class sample():
         i.e if it is a p-type material with 1e16 dopants, this function sets
         Na = 1e16 and Nd = 0.
         '''
-
         if self.dopant_type is None:
             print('Doping type not set')
 
@@ -75,6 +111,9 @@ class sample():
             elif self.dopant_type == 'n-type':
                 self._Nd = value
                 self._Na = 0
+            else:
+                print('\n\n', self.dopant_type, '\n\n')
+        # print('have set', self._Na, self._Nd)
 
     @property
     def Na(self):
@@ -97,3 +136,32 @@ class sample():
     @Nd.setter
     def Nd(self, value):
         self._Nd = value
+
+    @property
+    def ni(self):
+        model = IntrinsicCarrierDensity(
+            material='Si', temp=self.temp,
+        )
+
+        return getvalue_modelornumber(self._ni, model, 'update',
+                                      author=self._ni)
+
+    @ni.setter
+    def ni(self, val):
+        self._ni = val
+
+    @property
+    def ni_eff(self):
+        model = BandGapNarrowing(
+            material='Si',
+            temp=self.temp,
+            nxc=self.nxc,
+            Na=self.Na,
+            Nd=self.Nd,
+        )
+        return getvalue_modelornumber(self._nieff, model, 'ni_eff', ni=self.ni,
+                                      author=self._nieff)
+
+    @ni_eff.setter
+    def ni_eff(self, val):
+        self._nieff = val

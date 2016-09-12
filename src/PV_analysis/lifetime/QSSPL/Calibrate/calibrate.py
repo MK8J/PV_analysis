@@ -27,6 +27,7 @@ def calibrate(I_PL, ltc_PC, fitting_index=None):
     if fitting_index is None:
         fitting_index = np.ones(ltc_PC.shape, dtype=bool)
 
+    # lets the loop start
     change = 1
     while change > 0.01:
         ltc_PC._cal_nxc(None)

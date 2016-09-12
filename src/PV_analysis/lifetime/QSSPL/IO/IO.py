@@ -3,6 +3,7 @@ import sys
 import os
 import numpy as np
 from PV_analysis.lifetime.QSSPL.core import lifetime_PL
+import re
 
 
 def load(file_path):
@@ -34,14 +35,19 @@ def load(file_path):
         tau_PL.I_PL = data['PL']
         tau_PL.time = data['Time']
         tau_PL.gen_V = data['Gen']
-        try:
-            tau_PL._m_settings = extract_info(file_inf, method)
+        # try:
+        tau_PL._m_settings = extract_info(file_inf, method)
 
-            for attr in ['doping', 'thickness', 'dopant', 'Ai', 'Fs']:
-                if attr in tau_PL._m_settings.keys():
-                    setattr(tau_PL, attr, lifetime_PL._m_settings[attr])
-        except:
-            print('No inf file found when loading PL file')
+        tau_PL.sample.temp = tau_PL._m_settings['Temp']
+        tau_PL.sample.dopant_type = tau_PL._m_settings['Type'] + '-type'
+        tau_PL.sample.absorptance = 1. - \
+            tau_PL._m_settings['Reflection'] / 100.
+        tau_PL.Fs = tau_PL._m_settings['Fs']
+        tau_PL.Ai = tau_PL._m_settings['Ai']
+        tau_PL.sample.thickness = tau_PL._m_settings['Thickness']
+        tau_PL.sample.doping = tau_PL._m_settings['Doping']
+        # except:
+        # print('No inf file found when loading PL file')
     return tau_PL
 
 
@@ -86,7 +92,7 @@ def extract_processed_data(file_path):
 
 def extract_info(file_path, method):
     '''
-    This grabs the measurement infromation from a QSSPL measurement
+    This grabs the measurement infromation from an inf file.
     '''
 
     # Externsion of supported files
@@ -177,8 +183,9 @@ def _Load_InfData_Python(file_path):
     with open(file_path, 'r') as f:
         s = f.read()
 
+    s = re.sub('\n\n+', '\n', s)
+
     for i in s.split('\n')[2:-1]:
-        print(i)
         List[i.split(':\t')[0].strip()] = num(i.split(':\t')[1])
 
     return List

@@ -35,22 +35,22 @@ def J0(nxc, tau, thickness, ni, method, **kwargs):
     # so this
     # print(kwargs, method)
 
-    print('\n\n\n')
+    # print('\n\n\n')
     # print(method_dic[method](nxc, tau, thickness, ni, **kwargs))
     # print(nxc, tau, thickness, ni)
-    print('\n\n\n')
+    # print('\n\n\n')
     return np.asarray([method_dic[method](nxc, tau, thickness, ni, **kwargs)]).flatten()[0]
 
 
 def _J0_Kimmerle_Diffusion(
-        nxc, tau, thickness, ni, tau_aug, Ndop, D_ambi, **kwargs):
+        nxc, tau, thickness, ni, tau_aug, Ndop, D_ambi, ni_eff, **kwargs):
     # initialise the values
-    _J0 = _J0_Kimmerle(nxc, tau, thickness, ni, tau_aug)
+    _J0 = _J0_Kimmerle(nxc, tau, thickness, ni, tau_aug, ni_eff)
 
     for i in range(10):
         tau_SRH = 1. / (1. / tau - 1. / tau_aug -
                         1. / (
-                            const.e * thickness * ni**2 / (
+                            const.e * thickness * ni_eff**2 / (
                                 2 * _J0 * (nxc + Ndop)
                             ) +
                             thickness**2 / D_ambi / np.pi**2)
@@ -58,34 +58,34 @@ def _J0_Kimmerle_Diffusion(
 
         tau_SRH = np.mean(tau_SRH)
 
-        tau_cor = 1. / ni**2 / (1. / tau - 1. / tau_aug - 1. / tau_SRH)
+        tau_cor = 1. / ni_eff**2 / (1. / tau - 1. / tau_aug - 1. / tau_SRH)
         _J0 = _J0_KaneSwanson(nxc, tau_cor, thickness, 1)
 
     return _J0
 
 
-def _J0_Kimmerle_SRH(nxc, tau, thickness, ni, tau_aug, Ndop, **kwargs):
+def _J0_Kimmerle_SRH(nxc, tau, thickness, ni, tau_aug, Ndop, ni_eff, **kwargs):
     # initialise the values
-    _J0 = _J0_Kimmerle(nxc, tau, thickness, ni, tau_aug)
+    _J0 = _J0_Kimmerle(nxc, tau, thickness, ni, tau_aug, ni_eff)
     for i in range(10):
         tau_SRH = 1. / (1. / tau - 1. / tau_aug -
                         2 * _J0 * (nxc + Ndop) /
-                        (const.e * thickness * ni**2)
+                        (const.e * thickness * ni_eff**2)
                         )
 
         tau_SRH = np.mean(tau_SRH)
 
-        tau_cor = 1. / ni**2 / (1. / tau - 1. / tau_aug - 1. / tau_SRH)
+        tau_cor = 1. / ni_eff**2 / (1. / tau - 1. / tau_aug - 1. / tau_SRH)
         _J0 = _J0_KaneSwanson(nxc, tau_cor, thickness, 1)
     return _J0
 
 
-def _J0_Kimmerle(nxc, tau, thickness, ni, tau_aug, **kwargs):
-    tau_cor = 1. / ni**2 / (1. / tau - 1. / tau_aug)
+def _J0_Kimmerle(nxc, tau, thickness, ni, tau_aug, ni_eff, **kwargs):
+    tau_cor = 1. / ni_eff**2 / (1. / tau - 1. / tau_aug)
     return _J0_KaneSwanson(nxc, tau_cor, thickness, 1)
 
 
-def _J0_King(nxc, tau, thickness, ni, tau_aug, **kwargs):
+def _J0_King(nxc, tau, thickness, ni, tau_aug,  **kwargs):
     tau_cor = 1. / (1. / tau - 1. / tau_aug)
     return _J0_KaneSwanson(nxc, tau_cor, thickness, ni)
 

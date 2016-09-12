@@ -1,5 +1,6 @@
 
 import numpy as np
+import numbers
 import scipy.constants as const
 from semiconductor.electrical.mobility import Mobility
 from PV_analysis.lifetime.core import lifetime as LTC
@@ -32,8 +33,8 @@ def _voltage2conductance_sinton(V, coil_constants):
 
     conductance = (V-coil_constants[c])**2 coil_constants[a] + (V-coil_constants[c]) coil_constants[b]
     '''
-
-    return (V - coil_constants['c'])**2 * coil_constants['a'] + (V - coil_constants['c']) * coil_constants['b']
+    V0 = V - coil_constants['c']
+    return (V0)**2 * coil_constants['a'] + (V0) * coil_constants['b']
 
 
 def _voltage2conductance_quadratic(V, coil_constants):
@@ -46,19 +47,39 @@ def _voltage2conductance_quadratic(V, coil_constants):
     return V**2 * coil_constants['a'] + V * coil_constants['b'] + coil_constants['c']
 
 
-def conductance2deltan(cond, Na, Nd, thickness, mob_author=None, temp=300):
+def conductance2deltan(conductance, Na, Nd, thickness, mobility_sum, temp):
     '''
     returns the excess conductance for a sample
     '''
 
-    nxc = 1e10 * np.ones(cond.shape[0])
-    i = 1
-    while (i > 0.001):
+    if isinstance(mobility_sum, np.ndarray):
+        nxc = _conductance2deltan_array(conductance, thickness, mobility_sum)
 
-        _temp = cond / const.e / Mobility(
+    elif type(mobility_sum) == str:
+        nxc = _conductance2deltan_model(
+            conductance, Na, Nd, thickness, mobility_sum, temp)
+    elif mobility_sum is None:
+        nxc = _conductance2deltan_model(
+            conductance, Na, Nd, thickness, mobility_sum, temp)
+
+    return nxc
+
+
+def _conductance2deltan_model(conductance, Na, Nd, thickness, mobility_sum_author, temp):
+    '''
+    returns the excess conductance for a sample
+    '''
+    assert type(mobility_sum_author) == str or mobility_sum_author is None
+
+    nxc = 1e10 * np.ones(conductance.shape[0])
+    i = 1
+
+    while (i > 0.001):
+        mobility_sum = Mobility(
         ).mobility_sum(nxc=nxc, Na=Na,
-                       Nd=Nd, temp=temp, author=mob_author
-                       ) / thickness
+                       Nd=Nd, temp=temp, author=mobility_sum_author
+                       )
+        _temp = _conductance2deltan_array(conductance, thickness, mobility_sum)
 
         _temp[_temp < 0.] = 0.
         index = np.nonzero(nxc)
@@ -67,6 +88,15 @@ def conductance2deltan(cond, Na, Nd, thickness, mob_author=None, temp=300):
         nxc = _temp
 
     return nxc
+
+
+def _conductance2deltan_array(conductance, thickness, mobility_sum):
+    '''
+    returns the excess conductance for a sample for a given conductance,
+    thickness and mobility sum
+    '''
+
+    return conductance / const.e / mobility_sum / thickness
 
 
 class lifetime_QSSPC(LTC):
@@ -81,64 +111,69 @@ class lifetime_QSSPC(LTC):
                       'c': None}
 
     calibration_method = 'quad'  # options are sinton and quad
-    dark_conductance = None
+    dark_voltage = None
 
     _type = 'PC'
 
     def __init__(self, **kwargs):
         super(**kwargs).__init__()
         self.analysis_options['mobility'] = None
-        self.analysis_options['ni'] = None
-        self.analysis_options['Bg_narrowing'] = None
+        self.analysis_options['mobility_sum'] = None
 
-    def _cal_nxc(self, dark_conductance=None):
-        self.nxc = voltage2conductance(
+    def _cal_nxc(self, dark_voltage=None):
+        '''
+        Caculates the excess carrier density from the conductance
+        using PC coil cosntants, and a mobility model.
+        '''
+        # this assumes the voltage prodided is the meaured voltage,
+        # and does not have a value background corrected
+        self.sample.nxc = voltage2conductance(
             voltage=self.PC, coil_constants=self.coil_constants,
             method=self.calibration_method)
 
         # background correct the data, generation and conductance
-        if dark_conductance:
-            self.nxc -= voltage2conductance(
-                voltage=dark_conductance, coil_constants=self.coil_constants,
+        if dark_voltage:
+
+            self.sample.nxc -= voltage2conductance(
+                voltage=dark_voltage, coil_constants=self.coil_constants,
                 method=self.calibration_method)
 
         else:
-            self.nxc = self._bg_correct(self.nxc)
+
+            self.sample.nxc = self._bg_correct(self.sample.nxc)
 
         self.gen_V = self._bg_correct(self.gen_V)
 
         # get nxc
-        self.nxc = conductance2deltan(
-            cond=self.nxc, Na=self.sample.Na,
+        self.sample.nxc = conductance2deltan(
+            conductance=self.sample.nxc, Na=self.sample.Na,
             Nd=self.sample.Nd, thickness=self.sample.thickness,
-            mob_author=self.analysis_options['mobility'],
+            mobility_sum=self.mobility_sum,
             temp=self.sample.temp)
 
-    def cal_lifetime(self, analysis=None, dark_conductance=None):
+    def cal_lifetime(self, analysis=None, dark_voltage=None):
         # get conductance
-        self._cal_mcd(dark_conductance)
+        self._cal_nxc(dark_voltage)
 
         # get gen
         self.gen = self.gen_V * self.Fs
 
+        print(self.gen.shape, self.gen_V.shape,
+              self.PC.shape, self.sample.nxc.shape)
         # then do lifetime
         self._cal_lifetime(analysis=None)
 
     @property
     def mobility_sum(self):
         if isinstance(self.analysis_options['mobility_sum'], numbers.Number):
-            _mu = self.analysis_options['mobility_sum']
+            _mu_sum = self.analysis_options['mobility_sum']
         elif isinstance(self.analysis_options['mobility_sum'], np.ndarray):
-            _mu = self.analysis_options['mobility_sum']
+            _mu_sum = self.analysis_options['mobility_sum']
         else:
-            _mu = Mobility(
-                author=self.analysis_options['mobility'],
-                material='Si', temp=self.sample.temp,
-                nxc=self.nxc, Na=self.sample.Na, Nd=self.sample.Nd
-            ).mobility_sum()
+            _mu_sum = self.analysis_options['mobility']
 
-        return _mu
+        return _mu_sum
 
     @mobility_sum.setter
     def mobility_sum(self, value):
-        self.analysis_options['mobility_sum'] = val
+        self.analysis_options['mobility_sum'] = value

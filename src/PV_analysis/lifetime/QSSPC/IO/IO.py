@@ -13,6 +13,9 @@ if sys.platform == "win32":
         pass
 
 
+from PV_analysis.lifetime.QSSPL.IO import IO as QSSPLIO
+
+
 def Sinton2014_Settings(File):
     # This grabs the calibration constants for the coil and reference
     # This outputs them as a dictionary
@@ -372,35 +375,38 @@ def load_lifetime_sinton(file_path):
     inf = extract_info(file_path)
 
     # pass to the lifetime class
+    ltc.sample.nxc = data['Minority Carrier Density']
     ltc.tau = data['Tau (sec)']
-    ltc.nxc = data['Minority Carrier Density']
     ltc.gen = data['Generation (pairs/s)']
-    ltc.auger = 1. / (
+    ltc.intrinsic_tau = 1. / (
         1. / data['Tau (sec)'] -
         data['1/Tau Corrected']
     )
 
-    ltc.coil_constants = {'a': inf['A'],
-                          'b': inf['B'],
-                          'c': inf['C']}
+    ltc.time = data['Time in s']
+    ltc.PC = data['Photovoltage'] + inf['dark_voltage']
+    ltc.gen_V = data['Reference Voltage']
+    ltc.mobility_sum = data['Conductivity increase'] / \
+        data['Apparent CD'] / C.e / inf['thickness']
 
+    ltc.coil_constants = {'a': inf.pop('A'),
+                          'b': inf.pop('B'),
+                          'c': inf.pop('C')}
+
+    # if there are real numbers for ni use them.
     if not np.all(np.isnan(data['ni'])):
-        ltc.ni_eff = data['ni']
+        ltc.sample.ni_eff = data['ni']
     else:
         # values taken from the sinton file
         # this is the same value for all versions
         # to 2016.
-        ltc.ni = np.sqrt(7.4e19)
+        ltc.sample.ni = np.sqrt(7.4e19)
         # no BGN valued used
-        ltc.ni_eff = np.sqrt(7.4e19)
-
-    ltc.time = data['Time in s']
-    ltc.PC = data['Photovoltage'] + inf['dark_voltage']
-    ltc.gen_V = data['Reference Voltage']
+        ltc.sample.ni_eff = 'None'
 
     # sintons definition of Fs
-    ltc.Fs = 0.038 / C.e / inf['RefCell']
-    ltc.sample.absorptance = inf['optical_constant']
+    ltc.Fs = 0.038 / C.e / inf.pop('RefCell')
+    ltc.sample.absorptance = inf.pop('optical_constant')
 
     if inf['sample_type'] == b'p-type':
         inf['dopant'] = 'boron'
@@ -408,11 +414,13 @@ def load_lifetime_sinton(file_path):
         inf['dopant'] = 'phosphorus'
 
     # sets the dopant type
-    inf['dopant_type'] = inf['sample_type'].decode("utf-8")
+    inf['dopant_type'] = inf.pop('sample_type').decode("utf-8")
 
     # Pasa a dic to update atttrs, but turn off warnings
     # for non attributes first
     ltc._warnings = False
+    # need to set the dopant-type first, so know what to do when doping is set
+    ltc.attrs = {'dopant_type': inf['dopant_type']}
     ltc.attrs = inf
     # turns the warnings back on
     ltc._warnings = True
@@ -443,3 +451,20 @@ def load_raw_voltages(file_path,
     ltc.gen_V = data['Generation_V']
 
     return ltc
+
+
+def load_inf_UNSW(file_path, ltc_PC, method='python'):
+    settings = QSSPLIO.extract_info(file_path, method)
+
+    ltc_PC.coil_constants = {'a': settings['Quad'],
+                             'b': settings['Lin'],
+                             'c': settings['Const']}
+
+    ltc_PC.sample.temp = settings['Temp']
+    ltc_PC.sample.dopant_type = settings['Type'] + '-type'
+    ltc_PC.sample.absorptance = 1. - settings['Reflection'] / 100.
+    ltc_PC.Fs = settings['Fs']
+    ltc_PC.sample.thickness = settings['Thickness']
+    ltc_PC.sample.doping = settings['Doping']
+
+    return ltc_PC

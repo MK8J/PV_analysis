@@ -10,6 +10,8 @@ import scipy.constants as C
 # sys.path.append(r'D:\Dropbox\CommonCode\semiconductor\src')
 # sys.path.append(r'/home/shanoot/Dropbox/CommonCode/semiconductor/src')
 from semiconductor.recombination import Intrinsic as IntTau
+from semiconductor.recombination import Radiative
+from semiconductor.recombination import Auger
 from semiconductor.material import IntrinsicCarrierDensity
 from semiconductor.material import BandGapNarrowing
 from semiconductor.electrical import Mobility
@@ -114,14 +116,13 @@ class lifetime():
     # measured values
     time = None
     gen = None
-    nxc = None
+    # nxc is a sample property
 
     # caculated value
     tau = None
 
     # ensure you know what the file is
-    file_name = None
-    sample_name = None
+    file_names = None
 
     # material properties/analysis options
     analysis_options = {
@@ -131,6 +132,8 @@ class lifetime():
         'bgc_value': 100,
         'ni': None,
         'ni_eff': None,
+        'intrinsic_tau': None,
+        'radiative': None,
         'auger': None,
         'D_ambi': None
     }
@@ -161,7 +164,8 @@ class lifetime():
             'analysis'] = analysis or self.analysis_options['analysis']
 
         self.tau = self._analsis_methods_dic[self.analysis_options['analysis']](
-            nxc=self.nxc, gen=self.gen / (
+            nxc=self.sample.nxc,
+            gen=self.gen / (
                 self.sample.absorptance * self.sample.thickness
             ), time=self.time, other=other)
 
@@ -171,46 +175,8 @@ class lifetime():
         returns the open circuit voltage of the device
         '''
         return const.k * self.sample.temp / const.e * np.log(
-            self.nxc * (self.nxc + self.sample.doping) / self.ni**2)
-
-    @property
-    def ni(self):
-        if isinstance(self.analysis_options['ni'], numbers.Number):
-            _ni = self.analysis_options['ni']
-        elif isinstance(self.analysis_options['ni'], np.ndarray):
-            _ni = self.analysis_options['ni']
-        else:
-            _ni = IntrinsicCarrierDensity(
-                material='Si', temp=self.sample.temp,
-                author=self.analysis_options['ni']
-            ).update()
-        return _ni
-
-    @ni.setter
-    def ni(self, val):
-        self.analysis_options['ni'] = val
-
-    @property
-    def ni_eff(self):
-        if isinstance(self.analysis_options['ni_eff'], numbers.Number):
-            _ni = self.analysis_options['ni_eff']
-        elif isinstance(self.analysis_options['ni_eff'], np.ndarray):
-            _ni = self.analysis_options['ni_eff']
-        else:
-            _ni = self.ni * BandGapNarrowing(
-                material='Si',
-                temp=self.sample.temp,
-                author=self.analysis_options['ni_eff'],
-                nxc=self.nxc,
-                Na=self.sample.Na,
-                Nd=self.sample.Nd
-            ).ni_multiplier()
-            print(self.ni, _ni)
-        return _ni
-
-    @ni_eff.setter
-    def ni_eff(self, val):
-        self.analysis_options['ni_eff'] = val
+            self.sample.nxc *
+            (self.sample.nxc + self.sample.doping) / self.sample.ni_eff**2)
 
     @property
     def mobility_model(self):
@@ -232,13 +198,15 @@ class lifetime():
                 _D = vt * Mobility(
                     author=self.analysis_options['mobility'],
                     material='Si', temp=self.sample.temp,
-                    nxc=self.nxc, Na=self.sample.Na, Nd=self.sample.Nd
+                    nxc=self.sample.nxc,
+                    Na=self.sample.Na, Nd=self.sample.Nd
                 ).electron_mobility()
             elif self.sample.dopant_type == 'p-type':
                 _D = vt * Mobility(
                     author=self.analysis_options['mobility'],
                     material='Si', temp=self.sample.temp,
-                    nxc=self.nxc, Na=self.sample.Na, Nd=self.sample.Nd
+                    nxc=self.sample.nxc,
+                    Na=self.sample.Na, Nd=self.sample.Nd
                 ).hole_mobility()
             else:
                 print('sample dopant_type incorrected set as',
@@ -250,45 +218,80 @@ class lifetime():
     def D_ambi(self, value):
         self.analysis_options['D_ambi'] = val
 
-    # TODO:
-    # this needs to be changed from auger to intrinsic_lifetime
+    @property
+    def intrinsic_tau(self):
+        if isinstance(self.analysis_options['intrinsic_tau'], np.ndarray):
+            _intrinsic_tau = self.analysis_options['intrinsic_tau']
+        else:
+            _intrinsic_tau = 1. / (1. / self.auger + 1. / self.radiative)
+        return _intrinsic_tau
+
+    @intrinsic_tau.setter
+    def intrinsic_tau(self, value):
+        self.analysis_options['intrinsic_tau'] = value
+        self.analysis_options['auger'] = None
+        self.analysis_options['radiative'] = None
 
     @property
     def auger(self):
         if isinstance(self.analysis_options['auger'], np.ndarray):
             _auger = self.analysis_options['auger']
         else:
-            _auger = IntTau(
+            _auger = Auger(
                 material='Si',
                 temp=self.sample.temp,
                 Na=self.sample.Na,
                 Nd=self.sample.Nd,
                 author=self.analysis_options['auger'],
-                rad_author=None,
-                aug_author=self.analysis_options['auger'],
                 ni_author=self.analysis_options['ni']
-            ).tau(nxc=self.nxc)
+            ).tau(nxc=self.sample.nxc)
 
         return _auger
 
     @auger.setter
     def auger(self, val):
         self.analysis_options['auger'] = val
+        self.analysis_options['intrinsic_tau'] = None
+
+    @property
+    def radiative(self):
+        if isinstance(self.analysis_options['radiative'], np.ndarray):
+            _auger = self.analysis_options['radiative']
+        else:
+            _auger = Radiative(
+                material='Si',
+                temp=self.sample.temp,
+                Na=self.sample.Na,
+                Nd=self.sample.Nd,
+                author=self.analysis_options['radiative'],
+                ni_author=self.analysis_options['ni']
+            ).tau(nxc=self.sample.nxc)
+
+        return _auger
+
+    @radiative.setter
+    def radiative(self, val):
+        self.analysis_options['radiative'] = val
+        self.analysis_options['intrinsic_tau'] = None
 
     @property
     def attrs(self):
         return {
-            'doping': self.sample.doping,
+            'name': self.sample.name,
+            'absorptance': self.sample.absorptance,
+            'temperature': self.sample.temp,
+            'Na': self.sample.Na,
+            'Nd': self.sample.Nd,
             'thickness': self.sample.thickness,
             'dopant type': self.sample.dopant_type,
-            'tau': self.tau,
-            'nxc': self.nxc,
+            'file name': self.file_names
         }
 
     @attrs.setter
     def attrs(self, kwargs):
         self.other_inf = {}
         assert type(kwargs) == dict
+
         for key, value in kwargs.items():
             if hasattr(self, key):
                 setattr(self, key, value)
@@ -305,25 +308,28 @@ class lifetime():
         Crops the data to a provided carrier density
         '''
 
-        index = self.nxc > min_nxc
-        index *= self.nxc < max_nxc
+        index = self.sample.nxc > min_nxc
+        index *= self.sample.nxc < max_nxc
 
-        self.nxc = self.nxc[index]
+        self.sample.nxc = self.sample.nxc[index]
         self.tau = self.tau[index]
         self.gen = self.gen[index]
         if isinstance(self.analysis_options['auger'], np.ndarray):
             self.auger = self.auger[index]
-        if isinstance(self.analysis_options['ni_eff'], np.ndarray):
-            self.ni = self.ni[index]
+        if self.sample.ni_eff.shape == self.index.shape:
+            self.sample.ni_eff = self.sample.ni_eff[index]
 
     def save(self):
 
         x = np.core.records.fromarrays(
-            [self.time, self.nxc, self.tau, self.gen],
-            names='time,nxc,tau, gen')
+            [self.time, self.sample.nxc, self.tau, self.gen],
+            names='time, nxc, tau, gen')
 
-        if self.file_name.count('.') == 1:
-            save_name = self.file_name.split('.')[0] + '_' + self.type
+        if self.file_names.count('.') == 1:
+            save_name = self.file_names.split(
+                '.')[0] + '_' + self.type
+
         else:
-            save_name = self.file_name
-        IO.save_named_data(self.file_name, )
+            save_name = self.file_names + self.type
+
+        IO.save_named_data(save_name, x, self.attrs)
