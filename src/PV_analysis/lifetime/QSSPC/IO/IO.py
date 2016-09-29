@@ -385,6 +385,10 @@ def load_lifetime_sinton(file_path):
 
     ltc.time = data['Time in s']
     ltc.PC = data['Photovoltage'] + inf['dark_voltage']
+
+    # ltc.PC_test = data['Conductivity increase']
+
+    ltc.dark_voltage = inf['dark_voltage']
     ltc.gen_V = data['Reference Voltage']
     ltc.mobility_sum = data['Conductivity increase'] / \
         data['Apparent CD'] / C.e / inf['thickness']

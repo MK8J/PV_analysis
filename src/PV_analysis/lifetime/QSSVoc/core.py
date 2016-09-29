@@ -1,6 +1,7 @@
 
 
 import numpy as np
+import numbers
 import scipy.constants as const
 from PV_analysis.lifetime.core import lifetime as LTC
 
@@ -60,16 +61,45 @@ class lifetime_Voc(LTC):
     Qscr_correction = False
 
     def __init__(self, **kwargs):
-        super(self, kwargs).__init__()
+        super(**kwargs).__init__()
+
+    def adjust_param(self, param, percent):
+        '''
+        adjust a parameter of the lifetime or attached sample  by the provided percentage. the percentage can be positive or negitive
+
+        inputs:
+            param: (string)
+                the paramter
+            percent: (float)
+                the percentange 50% is entered as 50
+
+        '''
+        assert isinstance(percent, numbers.Number)
+        if hasattr(self, param):
+            setattr(self, param, getattr(self, param) * (1 + percent / 100))
+        elif hasattr(self.sample, param):
+            setattr(self.sample, param, getattr(
+                self.sample, param) * (1 + percent / 100))
+        else:
+            print(param, ' not found')
+
+        pass
+
+    def _cal_nxc(self):
+
+        if self.sample.nxc is None:
+            self.sample.nxc = 0
+        # get dn
+        self.sample.nxc = Voc_2_deltan(
+            self.V, self.sample.doping, self.sample.ni_eff, self.sample.temp)
 
     def cal_lifetime(self, analysis=None):
 
-        # get dn
-        self.nxc = Voc_2_deltan(
-            self.V, self.sample.doping, self.sample.ni_eff, self.sample.temp)
+        self._cal_nxc()
+
         # get gen
         self.gen = self.gen_V * self.Fs / self.sample.thickness \
-            * self.sample.optical_c
+            * self.sample.absorptance
         self.gen = self._bg_correct(self.gen)
         # then do lifetime
         if self.Qscr_correction:

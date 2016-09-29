@@ -316,7 +316,7 @@ class lifetime():
         self.gen = self.gen[index]
         if isinstance(self.analysis_options['auger'], np.ndarray):
             self.auger = self.auger[index]
-        if self.sample.ni_eff.shape == self.index.shape:
+        if self.sample.ni_eff.shape == index.shape:
             self.sample.ni_eff = self.sample.ni_eff[index]
 
     def save(self):

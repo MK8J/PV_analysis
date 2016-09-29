@@ -6,7 +6,7 @@ import openpyxl as pyxl
 from ..core import lifetime_Voc as LTC
 
 
-def load_data(file_path):
+def load_data(file_path, voc_header='Voc', gen_header='Gen', time_header='time_s', raw_dat_ext='.Raw Data.dat', inf_ext='.inf'):
     '''
     Loads a tab spaced text file and
     returns a lifetime class. It assumes the lifetime a tab delimited file,
@@ -21,14 +21,28 @@ def load_data(file_path):
 
     # get the measurement data
     data = extract_measurement_data(file_path)
-    inf = extract_info(file_path.replace('.dat', '.inf'))
+    inf = extract_info(file_path.replace(raw_dat_ext, inf_ext))
 
     # pass to the lifetime class
-    ltc.time = data['Time_s']
-    ltc.V = data['Voc']
-    ltc.gen_V = data['Gen']
+    try:
+        ltc.time = data[time_header]
+        ltc.V = data[voc_header]
+        ltc.gen_V = data[gen_header]
+    except:
+        print('Could not find passed headers\n'
+              'Please check you entered the correct headers for the file'
+              'The headers in the file were {0}'.format(data.dtype.names))
 
-    # Pasa a dic to update atttrs, but turn off warnings
+    if 'reflection' in inf.keys():
+        inf['absorptance'] = (100. - inf['reflection']) / 100.
+
+    if 'type' in inf.keys():
+        inf['dopant_type'] = inf['type']
+
+    if 'fs' in inf.keys():
+        inf['Fs'] = inf['fs']
+
+    # Pass a dic to update atttrs, but turn off warnings
     # for non attributes first
     ltc._warnings = False
     ltc.attrs = inf
@@ -41,30 +55,31 @@ def load_data(file_path):
 def extract_measurement_data(file_path):
     data = np.genfromtxt(
         file_path, unpack=True, names=True, delimiter='\t')
-    # s = np.array([])
-    # dic = {'Time_s': 'Time', 'Generation_V': 'Gen',
-    #        'PL_V': 'PL', 'PC_V': 'PC'}
-    # # print np.array(data.dtype.names)
-    # for i in np.array(data.dtype.names):
-    #     # print i,dic[i]
-    #     s = np.append(s, dic[i])
-    #
-    # # print s
-    #
-    # ('Time','Gen','PL','PC')
+
     return data
 
 
 def extract_info(file_path):
+    '''
+    returns a dic with all names in lower case
 
+    assumes the file is in the format:
+        item_name:\tvalue or string\n
+    '''
     List = {}
 
     with open(file_path, 'r') as f:
         s = f.read()
 
+    if '\n\n' in s:
+        s = s.replace('\n\n', '\n')
+
     for i in s.split('\n')[2:-1]:
         # print(i)
-        List[i.split(':\t')[0].strip()] = num(i.split(':\t')[1])
+        try:
+            List[i.split(':\t')[0].strip().lower()] = num(i.split(':\t')[1])
+        except:
+            pass
 
     return List
 

@@ -64,11 +64,12 @@ class sample():
 
     name = None
     sample_id = None
-    dopant_type = None  # takes either 'n-type' or b'p-type'
+    _dopant_type = None  # takes either 'n-type' or b'p-type'
     thickness = None
     absorptance = 1
     _Na = None
     _Nd = None
+    _doping = None
     _ni = IntrinsicCarrierDensity().calculationdetails['author']
     _nieff = BandGapNarrowing().calculationdetails['author']
     temp = 300  # as most measurements are done at room temperature
@@ -82,6 +83,25 @@ class sample():
         for key, val in dic.items():
             if hasattr(self, key):
                 setattr(self, key, val)
+
+    @property
+    def dopant_type(self):
+        '''
+        returns the dopant type
+        '''
+        return self._dopant_type
+
+    @dopant_type.setter
+    def dopant_type(self, value):
+        '''
+        returns the dopant type
+        '''
+        if value == 'p' or value == 'p-type':
+            self._dopant_type = 'p-type'
+        elif value == 'n' or value == 'n-type':
+            self._dopant_type = 'n-type'
+
+        self.doping = self._doping
 
     @property
     def doping(self):
@@ -101,10 +121,10 @@ class sample():
         i.e if it is a p-type material with 1e16 dopants, this function sets
         Na = 1e16 and Nd = 0.
         '''
-        if self.dopant_type is None:
-            print('Doping type not set')
+        self._doping = value
 
-        else:
+        if self.dopant_type is not None:
+
             if self.dopant_type == 'p-type':
                 self._Na = value
                 self._Nd = 0
@@ -113,7 +133,6 @@ class sample():
                 self._Na = 0
             else:
                 print('\n\n', self.dopant_type, '\n\n')
-        # print('have set', self._Na, self._Nd)
 
     @property
     def Na(self):
@@ -122,9 +141,16 @@ class sample():
         '''
         return self._Na
 
+    def _check_dopant_type(self):
+        if self._Na > self._Nd:
+            self.dopant_type = 'n-type'
+        else:
+            self.dopant_type = 'p-type'
+
     @Na.setter
     def Na(self, value):
         self._Na = value
+        self._check_dopant_type()
 
     @property
     def Nd(self):
@@ -136,6 +162,7 @@ class sample():
     @Nd.setter
     def Nd(self, value):
         self._Nd = value
+        self._check_dopant_type()
 
     @property
     def ni(self):
