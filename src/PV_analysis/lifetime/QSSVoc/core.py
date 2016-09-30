@@ -63,28 +63,6 @@ class lifetime_Voc(LTC):
     def __init__(self, **kwargs):
         super(**kwargs).__init__()
 
-    def adjust_param(self, param, percent):
-        '''
-        adjust a parameter of the lifetime or attached sample  by the provided percentage. the percentage can be positive or negitive
-
-        inputs:
-            param: (string)
-                the paramter
-            percent: (float)
-                the percentange 50% is entered as 50
-
-        '''
-        assert isinstance(percent, numbers.Number)
-        if hasattr(self, param):
-            setattr(self, param, getattr(self, param) * (1 + percent / 100))
-        elif hasattr(self.sample, param):
-            setattr(self.sample, param, getattr(
-                self.sample, param) * (1 + percent / 100))
-        else:
-            print(param, ' not found')
-
-        pass
-
     def _cal_nxc(self):
 
         if self.sample.nxc is None:
@@ -98,8 +76,7 @@ class lifetime_Voc(LTC):
         self._cal_nxc()
 
         # get gen
-        self.gen = self.gen_V * self.Fs / self.sample.thickness \
-            * self.sample.absorptance
+        self.gen = self.gen_V * self.Fs
         self.gen = self._bg_correct(self.gen)
         # then do lifetime
         if self.Qscr_correction:

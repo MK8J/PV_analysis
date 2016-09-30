@@ -303,6 +303,28 @@ class lifetime():
                     print('Attribute set in dic other_inf')
                 self.other_inf[key] = value
 
+    def adjust_param(self, param, percent):
+        '''
+        adjust a parameter of the lifetime or attached sample  by the provided percentage. the percentage can be positive or negitive
+
+        inputs:
+            param: (string)
+                the paramter
+            percent: (float)
+                the percentange 50% is entered as 50
+
+        '''
+        assert isinstance(percent, numbers.Number)
+        if hasattr(self, param):
+            setattr(self, param, getattr(self, param) * (1 + percent / 100))
+        elif hasattr(self.sample, param):
+            setattr(self.sample, param, getattr(
+                self.sample, param) * (1 + percent / 100))
+        else:
+            print(param, ' not found')
+
+        pass
+
     def crop_nxc(self, min_nxc, max_nxc):
         '''
         Crops the data to a provided carrier density

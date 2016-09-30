@@ -64,7 +64,7 @@ def extract_info(file_path):
     returns a dic with all names in lower case
 
     assumes the file is in the format:
-        item_name:\tvalue or string\n
+    item_name:\tvalue or string\n
     '''
     List = {}
 
