@@ -1,5 +1,3 @@
-
-
 import numpy as np
 import numbers
 import matplotlib.pylab as plt
@@ -303,6 +301,28 @@ class lifetime():
                     print('Attribute set in dic other_inf')
                 self.other_inf[key] = value
 
+    def adjust_param(self, param, percent):
+        '''
+        adjust a parameter of the lifetime or attached sample  by the provided percentage. the percentage can be positive or negitive
+
+        inputs:
+            param: (string)
+                the paramter
+            percent: (float)
+                the percentange 50% is entered as 50
+
+        '''
+        assert isinstance(percent, numbers.Number)
+        if hasattr(self, param):
+            setattr(self, param, getattr(self, param) * (1 + percent / 100))
+        elif hasattr(self.sample, param):
+            setattr(self.sample, param, getattr(
+                self.sample, param) * (1 + percent / 100))
+        else:
+            print(param, ' not found')
+
+        pass
+
     def crop_nxc(self, min_nxc, max_nxc):
         '''
         Crops the data to a provided carrier density
@@ -316,7 +336,7 @@ class lifetime():
         self.gen = self.gen[index]
         if isinstance(self.analysis_options['auger'], np.ndarray):
             self.auger = self.auger[index]
-        if self.sample.ni_eff.shape == self.index.shape:
+        if self.sample.ni_eff.shape == index.shape:
             self.sample.ni_eff = self.sample.ni_eff[index]
 
     def save(self):

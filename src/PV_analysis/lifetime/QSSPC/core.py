@@ -1,4 +1,3 @@
-
 import numpy as np
 import numbers
 import scipy.constants as const
@@ -31,7 +30,8 @@ def _voltage2conductance_sinton(V, coil_constants):
     '''
     assumes the constants provided follow
 
-    conductance = (V-coil_constants[c])**2 coil_constants[a] + (V-coil_constants[c]) coil_constants[b]
+    conductance = (V-coil_constants[c])**2 coil_constants[a] +
+     (V-coil_constants[c]) coil_constants[b]
     '''
     V0 = V - coil_constants['c']
     return (V0)**2 * coil_constants['a'] + (V0) * coil_constants['b']
@@ -41,10 +41,12 @@ def _voltage2conductance_quadratic(V, coil_constants):
     '''
     assumes the constants provided follow
 
-    conductance = V**2 coil_constants[a] + V coil_constants[b] + coil_constants[c]
+    conductance = V**2 coil_constants[a] + V coil_constants[b] +
+     coil_constants[c]
     '''
 
-    return V**2 * coil_constants['a'] + V * coil_constants['b'] + coil_constants['c']
+    return V**2 * coil_constants['a'] + V * coil_constants['b'] +\
+        coil_constants['c']
 
 
 def conductance2deltan(conductance, Na, Nd, thickness, mobility_sum, temp):
@@ -65,7 +67,8 @@ def conductance2deltan(conductance, Na, Nd, thickness, mobility_sum, temp):
     return nxc
 
 
-def _conductance2deltan_model(conductance, Na, Nd, thickness, mobility_sum_author, temp):
+def _conductance2deltan_model(conductance, Na, Nd, thickness,
+                              mobility_sum_author, temp):
     '''
     returns the excess conductance for a sample
     '''
@@ -81,12 +84,13 @@ def _conductance2deltan_model(conductance, Na, Nd, thickness, mobility_sum_autho
                        )
         _temp = _conductance2deltan_array(conductance, thickness, mobility_sum)
 
+        # make sure we are not loosing carriers
         _temp[_temp < 0.] = 0.
+        # ignore points where there are no carriers
         index = np.nonzero(nxc)
         i = np.average(abs(_temp[index] - nxc[index]) / nxc[index])
 
         nxc = _temp
-
     return nxc
 
 
@@ -133,7 +137,6 @@ class lifetime_QSSPC(LTC):
 
         # background correct the data, generation and conductance
         if dark_voltage:
-
             self.sample.nxc -= voltage2conductance(
                 voltage=dark_voltage, coil_constants=self.coil_constants,
                 method=self.calibration_method)
@@ -158,8 +161,6 @@ class lifetime_QSSPC(LTC):
         # get gen
         self.gen = self.gen_V * self.Fs
 
-        print(self.gen.shape, self.gen_V.shape,
-              self.PC.shape, self.sample.nxc.shape)
         # then do lifetime
         self._cal_lifetime(analysis=None)
 
@@ -177,3 +178,9 @@ class lifetime_QSSPC(LTC):
     @mobility_sum.setter
     def mobility_sum(self, value):
         self.analysis_options['mobility_sum'] = value
+
+if __name__ == '__main__':
+    print('ok')
+    print(_conductance2deltan_model(np.asarray([8.640E-04, 7.477E-03]),
+                                    Na=np.asarray([9.14E+15]), Nd=np.asarray([0]),
+                                    thickness=0.018, mobility_sum_author='Dannhauser-Krausse_1972', temp=300))

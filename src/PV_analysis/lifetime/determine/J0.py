@@ -4,7 +4,7 @@ import scipy.constants as const
 import matplotlib.pylab as plt
 
 
-def J0(nxc, tau, thickness, ni, method, **kwargs):
+def J0(nxc, tau, thickness, ni, method, ret_all=False, **kwargs):
     '''
     Caculates Jo from the measurement from a lifetime measurement
     inputs:
@@ -31,58 +31,76 @@ def J0(nxc, tau, thickness, ni, method, **kwargs):
         'Kimmerle_Diffusion': _J0_Kimmerle_Diffusion,
     }
 
-    # for some reason I was getting an array back for some of the fits,
-    # so this
-    # print(kwargs, method)
+    J0, nxc_cor, itau = method_dic[method](nxc, tau, thickness, ni, **kwargs)
 
-    # print('\n\n\n')
-    # print(method_dic[method](nxc, tau, thickness, ni, **kwargs))
-    # print(nxc, tau, thickness, ni)
-    # print('\n\n\n')
-    return np.asarray([method_dic[method](nxc, tau, thickness, ni, **kwargs)]).flatten()[0]
+    # print(J0, nxc_cor, itau)
+
+    if ret_all:
+        vals = (J0, nxc_cor, itau)
+    else:
+        vals = J0
+    return vals
 
 
 def _J0_Kimmerle_Diffusion(
         nxc, tau, thickness, ni, tau_aug, Ndop, D_ambi, ni_eff, **kwargs):
     # initialise the values
-    _J0 = _J0_Kimmerle(nxc, tau, thickness, ni, tau_aug, ni_eff)
+    _J0, nxc_corr, itau = _J0_Kimmerle(
+        nxc, tau, thickness, ni, tau_aug, ni_eff)
 
     for i in range(10):
         tau_SRH = 1. / (1. / tau - 1. / tau_aug -
                         1. / (
                             const.e * thickness * ni_eff**2 / (
-                                2 * _J0 * (nxc + Ndop)
+                                _J0 * (nxc + Ndop)
                             ) +
                             thickness**2 / D_ambi / np.pi**2)
                         )
 
         tau_SRH = np.mean(tau_SRH)
 
-        tau_cor = 1. / ni_eff**2 / (1. / tau - 1. / tau_aug - 1. / tau_SRH)
-        _J0 = _J0_KaneSwanson(nxc, tau_cor, thickness, 1)
+        if tau_SRH < 0:
+            tau_cor = 1. / \
+                (1. / tau - 1. / tau_aug)
+            _J0, nxc_corr, itau = _J0_KaneSwanson(
+                nxc, (tau_cor - thickness**2 / D_ambi / np.pi**2) / ni_eff**2, thickness, 1)
+        else:
+            tau_cor = 1.  / \
+                (1. / tau - 1. / tau_aug - 1. / tau_SRH)
+            _J0, nxc_corr, itau = _J0_KaneSwanson(
+                nxc, (tau_cor - thickness**2 / D_ambi / np.pi**2) / ni_eff**2, thickness, 1)
 
-    return _J0
+    return _J0, nxc_corr, itau / ni**2
 
 
 def _J0_Kimmerle_SRH(nxc, tau, thickness, ni, tau_aug, Ndop, ni_eff, **kwargs):
     # initialise the values
-    _J0 = _J0_Kimmerle(nxc, tau, thickness, ni, tau_aug, ni_eff)
+    _J0, nxc_corr, itau = _J0_Kimmerle(
+        nxc, tau, thickness, ni, tau_aug, ni_eff)
     for i in range(10):
         tau_SRH = 1. / (1. / tau - 1. / tau_aug -
-                        2 * _J0 * (nxc + Ndop) /
+                        _J0 * (nxc + Ndop) /
                         (const.e * thickness * ni_eff**2)
                         )
 
         tau_SRH = np.mean(tau_SRH)
+        # print('\t', tau_SRH)
 
-        tau_cor = 1. / ni_eff**2 / (1. / tau - 1. / tau_aug - 1. / tau_SRH)
-        _J0 = _J0_KaneSwanson(nxc, tau_cor, thickness, 1)
-    return _J0
+        if tau_SRH < 0:
+            tau_cor = 1. / ni_eff**2 / (1. / tau - 1. / tau_aug)
+            _J0, nxc_corr, itau = _J0_KaneSwanson(nxc, tau_cor, thickness, 1)
+        else:
+            tau_cor = 1. / ni_eff**2 / (1. / tau - 1. / tau_aug - 1. / tau_SRH)
+            _J0, nxc_corr, itau = _J0_KaneSwanson(nxc, tau_cor, thickness, 1)
+
+    return _J0, nxc_corr, itau / ni**2
 
 
 def _J0_Kimmerle(nxc, tau, thickness, ni, tau_aug, ni_eff, **kwargs):
     tau_cor = 1. / ni_eff**2 / (1. / tau - 1. / tau_aug)
-    return _J0_KaneSwanson(nxc, tau_cor, thickness, 1)
+    _J0, nxc_corr, itau = _J0_KaneSwanson(nxc, tau_cor, thickness, 1)
+
+    return _J0, nxc_corr, itau / ni**2
 
 
 def _J0_King(nxc, tau, thickness, ni, tau_aug,  **kwargs):
@@ -93,4 +111,4 @@ def _J0_King(nxc, tau, thickness, ni, tau_aug,  **kwargs):
 def _J0_KaneSwanson(nxc, tau, thickness, ni, **kwargs):
     slope, inter = np.polyfit(nxc, 1. / tau, 1)
 
-    return const.e * thickness * ni**2 * slope
+    return const.e * thickness * ni**2 * slope, nxc, 1. / tau

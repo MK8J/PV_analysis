@@ -1,6 +1,6 @@
 
-
 import numpy as np
+import numbers
 import scipy.constants as const
 from PV_analysis.lifetime.core import lifetime as LTC
 
@@ -60,16 +60,22 @@ class lifetime_Voc(LTC):
     Qscr_correction = False
 
     def __init__(self, **kwargs):
-        super(self, kwargs).__init__()
+        super(**kwargs).__init__()
+
+    def _cal_nxc(self):
+
+        if self.sample.nxc is None:
+            self.sample.nxc = 0
+        # get dn
+        self.sample.nxc = Voc_2_deltan(
+            self.V, self.sample.doping, self.sample.ni_eff, self.sample.temp)
 
     def cal_lifetime(self, analysis=None):
 
-        # get dn
-        self.nxc = Voc_2_deltan(
-            self.V, self.sample.doping, self.sample.ni_eff, self.sample.temp)
+        self._cal_nxc()
+
         # get gen
-        self.gen = self.gen_V * self.Fs / self.sample.thickness \
-            * self.sample.optical_c
+        self.gen = self.gen_V * self.Fs
         self.gen = self._bg_correct(self.gen)
         # then do lifetime
         if self.Qscr_correction:
