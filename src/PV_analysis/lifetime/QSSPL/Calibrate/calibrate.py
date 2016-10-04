@@ -29,15 +29,15 @@ def calibrate(I_PL, ltc_PC, fitting_index=None):
 
     # lets the loop start
     change = 1
-    while change > 0.01:
+    while change > 0.001:
         ltc_PC._cal_nxc(None)
 
         Ai, Ndop = calibrate_with_dn_quadratic(
             PL=I_PL[fitting_index],
-            nxc=ltc_PC.nxc[fitting_index],
+            nxc=ltc_PC.sample.nxc[fitting_index],
             Na=ltc_PC.sample.Na,
             Nd=ltc_PC.sample.Nd,
-            temp=ltc_PC.sample.temp)
+            temperature=ltc_PC.sample.temp)
 
         change = abs(ltc_PC.sample.doping - Ndop) / ltc_PC.sample.doping
         ltc_PC.sample.doping = Ndop
@@ -45,7 +45,7 @@ def calibrate(I_PL, ltc_PC, fitting_index=None):
     return Ai, Ndop
 
 
-def calibrate_with_dn_quadratic(PL, nxc, Na, Nd, temp):
+def calibrate_with_dn_quadratic(PL, nxc, Na, Nd, temperature):
     '''
     A function that fits
         PL = A * nxc * (nxc + N_dop) + C
@@ -61,17 +61,13 @@ def calibrate_with_dn_quadratic(PL, nxc, Na, Nd, temp):
         'Nd': 1e16,
     }
 
-    B = Radiative(material='Si', temp=temp, Na=Na, Nd=Nd).get_B(nxc)
-    # vals = np.polyfit(nxc, PL / B, 2, w=1. / PL)
+    B = Radiative(material='Si', temp=temperature, Na=Na, Nd=Nd).get_B(nxc)
 
     def func(nxc, Ai, Ndop):
-        return Ai * nxc * (nxc + Ndop)
+        return nxc * (nxc + Ndop) / Ai
 
     popt, pcov = curve_fit(func, nxc, PL / B, p0=(1e-19, 1e10), sigma=PL / B)
 
     Ai, Ndop = popt[0], popt[1]
-
-    # Ai = vals[0]
-    # Ndop = vals[1] / Ai
 
     return Ai, Ndop

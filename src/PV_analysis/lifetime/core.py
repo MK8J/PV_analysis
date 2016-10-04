@@ -74,7 +74,7 @@ def caltau_generalised(nxc, gen, time, other=0):
     return nxc / (gen - dndt - other)
 
 
-def caltau_steadystate(nxc, gen, *args):
+def caltau_steadystate(nxc, gen, **kargs):
     '''
     caculates the lifetime with the generatlised method
     inputs:
@@ -90,7 +90,7 @@ def caltau_steadystate(nxc, gen, *args):
     return nxc / (gen)
 
 
-def caltau_transient(nxc, time, *args):
+def caltau_transient(nxc, time, **kargs):
     '''
     caculates the lifetime using the assuming a transient
     inputs:
@@ -138,8 +138,8 @@ class lifetime():
 
     _analsis_methods_dic = {
         'generalised': caltau_generalised,
-        'transient': caltau_steadystate,
-        'steadystate': caltau_transient,
+        'transient': caltau_transient,
+        'steadystate': caltau_steadystate,
     }
 
     _warnings = True
@@ -163,8 +163,8 @@ class lifetime():
 
         self.tau = self._analsis_methods_dic[self.analysis_options['analysis']](
             nxc=self.sample.nxc,
-            gen=self.gen / (
-                self.sample.absorptance * self.sample.thickness
+            gen=self.gen * self.sample.absorptance / (
+                self.sample.thickness
             ), time=self.time, other=other)
 
     @property

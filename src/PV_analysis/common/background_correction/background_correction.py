@@ -42,7 +42,6 @@ def _bgc_nopints(data, no_points):
     '''
     background subtracts from the provided number of data points
     '''
-
     assert data.shape[0] > no_points
     data = np.copy(data)
     data -= np.average(data[-no_points:])

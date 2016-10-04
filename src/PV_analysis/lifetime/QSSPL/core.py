@@ -3,10 +3,10 @@
 import numpy as np
 import scipy.constants as const
 from PV_analysis.lifetime.core import lifetime as LTC
-from semiconductor.recombination.intrinsic import Radiative as rad
+from semiconductor.recombination import Radiative
 
 
-def PL_2_deltan(PL, doping, Ai, temp):
+def PL_2_deltan(PL, Na, Nd, Ai, temp):
     '''
     caculates the excess carrier density from a pl intenisty
     :
@@ -25,18 +25,18 @@ def PL_2_deltan(PL, doping, Ai, temp):
     i = 1
 
     # loop through to update B
+    doping = abs(Na - Nd)
     for i in range(10):
 
-        maj_car_den = doping + nxc
+        maj_car_den = doping
 
-        B = rad(nxc=nxc, Nd=doping, temp=temp)._get_B(
-        )
+        B = Radiative(material='Si', temp=temp, Na=Na, Nd=Nd).get_B(nxc)
 
         _temp = (-maj_car_den +
                  np.sqrt(np.absolute(
-                     (maj_car_den)**2 + 4 * PL * Ai / B))) / 2
+                     (maj_car_den)**2 + 4. * PL * Ai / B))) / 2.
 
-        i = np.average(np.absolute(temp - nxc) / nxc)
+        # i = np.average(np.absolute(_temp - nxc) / nxc)
         nxc = _temp
 
     return nxc
@@ -63,14 +63,14 @@ class lifetime_PL(LTC):
 
         # background correct the data
         self.I_PL = self._bg_correct(self.I_PL)
-        self.gen = self._bg_correct(self.gen)
+        self.gen_V = self._bg_correct(self.gen_V)
 
         # get dn
-        self.nxc = PL_2_deltan(
-            self.I_PL, self.sample.doping, self.Ai, self.temp)
+        self.sample.nxc = PL_2_deltan(
+            PL=self.I_PL, Na=self.sample.Na, Nd=self.sample.Nd, Ai=self.Ai,
+            temp=self.sample.temp)
 
         # get gen
-        self.gen = self.gen_V * self.Fs / self.sample.thickness * \
-            self.sample.optical_c
+        self.gen = self.gen_V * self.Fs
         # then do lifetime
         self._cal_lifetime(analysis=None)

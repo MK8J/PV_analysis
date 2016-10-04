@@ -61,18 +61,19 @@ def getvalue_modelornumber(value, model, extension, **kwargs):
 
 class sample():
 
-    name = None
-    sample_id = None
-    _dopant_type = None  # takes either 'n-type' or b'p-type'
-    thickness = None
-    absorptance = 1
-    _Na = None
-    _Nd = None
-    _doping = None
-    _ni = IntrinsicCarrierDensity().calculationdetails['author']
-    _nieff = BandGapNarrowing().calculationdetails['author']
-    temp = 300  # as most measurements are done at room temperature
-    nxc = None
+    def __init__(self):
+        self.name = None
+        self.sample_id = None
+        self._dopant_type = None  # takes either 'n-type' or b'p-type'
+        self.thickness = None
+        self.absorptance = 1
+        self._Na = None
+        self._Nd = None
+        self._doping = None
+        self._ni = IntrinsicCarrierDensity().calculationdetails['author']
+        self._nieff = BandGapNarrowing().calculationdetails['author']
+        self.temp = 300  # as most measurements are done at room temperature
+        self.nxc = None
 
     def attrs(self, dic):
         '''
@@ -100,18 +101,16 @@ class sample():
         elif value == 'n' or value == 'n-type':
             self._dopant_type = 'n-type'
 
-        self.doping = self._doping
-
     @property
     def doping(self):
         '''
         Returns the number of net dopants. This is not the ionised dopants
         '''
         if self._Na is None or self._Nd is None:
-            doping = 0
+            _doping = self._doping
         else:
-            doping = abs(self._Na - self._Nd)
-        return doping
+            _doping = abs(self._Na - self._Nd)
+        return _doping
 
     @doping.setter
     def doping(self, value):
