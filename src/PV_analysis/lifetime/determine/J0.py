@@ -26,7 +26,7 @@ def J0(nxc, tau, thickness, ni, method, ret_all=False, res=False,  ** kwargs):
     method_dic = {
         'kane&swanson': _J0_KaneSwanson,
         'king': _J0_King,
-        'Kimmerle_BGN': _J0_Kimmerle,
+        'Blum_BGN': _J0_Kimmerle,
         'Kimmerle_SRH': _J0_Kimmerle_SRH,
         'Kimmerle_Diffusion': _J0_Kimmerle_Diffusion,
     }

@@ -38,16 +38,18 @@ def load(file_path):
         # try:
         tau_PL._m_settings = extract_info(file_inf, method)
 
-        tau_PL.sample.temp = tau_PL._m_settings['Temp']
-        tau_PL.sample.dopant_type = tau_PL._m_settings['Type'] + '-type'
-        tau_PL.sample.absorptance = 1. - \
-            tau_PL._m_settings['Reflection'] / 100.
-        tau_PL.Fs = tau_PL._m_settings['Fs']
-        tau_PL.Ai = tau_PL._m_settings['Ai']
-        tau_PL.sample.thickness = tau_PL._m_settings['Thickness']
-        tau_PL.sample.doping = tau_PL._m_settings['Doping']
-        # except:
-        # print('No inf file found when loading PL file')
+        try:
+            tau_PL.sample.temp = tau_PL._m_settings['Temp']
+
+            tau_PL.sample.dopant_type = tau_PL._m_settings['Type'] + '-type'
+            tau_PL.sample.absorptance = 1. - \
+                tau_PL._m_settings['Reflection'] / 100.
+            tau_PL.Fs = tau_PL._m_settings['Fs']
+            tau_PL.Ai = tau_PL._m_settings['Ai']
+            tau_PL.sample.thickness = tau_PL._m_settings['Thickness']
+            tau_PL.sample.doping = tau_PL._m_settings['Doping']
+        except:
+            print('Error in loading inf PL\'s inf file')
     return tau_PL
 
 
