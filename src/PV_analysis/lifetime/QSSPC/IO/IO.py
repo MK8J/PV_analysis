@@ -177,6 +177,10 @@ def extract_measurement_data(File_path, Plot=False):
     # remove all the nan values from the data
     data = data[~np.isnan(data['Tau (sec)'])]
 
+    # TODO
+    # is this a place where I should filter the datas generation to make
+    # transient work?
+
     return data
 
 
@@ -306,6 +310,14 @@ def _openpylx_sinton2014_setuserdata(wb, dic):
     pass
 
 
+def _float_or_none(value):
+    try:
+        num = float(value)
+    except:
+        num = None
+    return num
+
+
 def _openpylx_sinton2014_extractsserdata(wb):
 
     # make sure the sheet is in the book
@@ -318,20 +330,20 @@ def _openpylx_sinton2014_extractsserdata(wb):
     # Grabbing the data and assigning it a nae
 
     user_set = {
-        'name': ws['A6'].value.encode('utf8'),
-        'thickness': float(ws['B6'].value),
-        'resisitivity': float(ws['C6'].value),
-        'm_resisitivity': float(ws['C9'].value),
-        'doping': float(ws['J9'].value),
+        'name': ws['A6'].value,
+        'thickness': _float_or_none(ws['B6'].value),
+        'resisitivity': _float_or_none(ws['C6'].value),
+        'm_resisitivity': _float_or_none(ws['C9'].value),
+        'doping': _float_or_none(ws['J9'].value),
         'sample_type': ws['D6'].value.encode('utf8'),
         'analysis_mode': ws['H6'].value.encode('utf8'),
-        'optical_constant': float(ws['E6'].value),
-        'absorptance': float(ws['E6'].value),
-        'MCD': float(ws['F6'].value),
-        'tau@MCD': float(ws['A9'].value),
-        'Voc@1sun': float(ws['K9'].value),
-        'J0': float(ws['D9'].value),
-        'bulk_tau': float(ws['E9'].value),
+        'optical_constant': _float_or_none(ws['E6'].value),
+        'absorptance': _float_or_none(ws['E6'].value),
+        'MCD': _float_or_none(ws['F6'].value),
+        'tau@MCD': _float_or_none(ws['A9'].value),
+        'Voc@1sun': _float_or_none(ws['K9'].value),
+        'J0': _float_or_none(ws['D9'].value),
+        'bulk_tau': _float_or_none(ws['E9'].value),
     }
 
     # makes a reference to the RawData page

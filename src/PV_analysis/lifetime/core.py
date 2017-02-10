@@ -146,7 +146,7 @@ class lifetime():
     _type = ''  # a saving extension
 
     def __init__(self, **kwargs):
-        self.attr = kwargs
+        self.attrs = kwargs
         self.sample = sample()
         pass
 
