@@ -115,8 +115,6 @@ def _J0_King(nxc, tau, thickness, ni, tau_aug,  **kwargs):
 
 
 def _J0_KaneSwanson(nxc, tau, thickness, ni, **kwargs):
-    # slope, inter = np.polyfit(
-    #     nxc, 1. / tau, 1)
 
     (slope, inter), residuals, rank, singular_values, rcond = np.polyfit(
         nxc, 1. / tau, 1, full=True)

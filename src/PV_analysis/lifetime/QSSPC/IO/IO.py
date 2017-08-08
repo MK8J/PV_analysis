@@ -249,8 +249,12 @@ def _openpyxl_Sinton2014_ExtractRawDatadata(wb):
     headers1 = tuple(
         [[j.value for j in i] for i in ws['A8':'I8']][0])
 
+    def div0check(value):
+        if value == '#DIV/0!':
+            value = np.inf
+        return value
     # get second section of data
-    values2 = np.array([[i.value for i in j] for j in ws['O9':'Z133']],
+    values2 = np.array([[div0check(i.value) for i in j] for j in ws['O9':'Z133']],
                        dtype=np.float64)
     headers2 = tuple(
         [[j.value for j in i] for i in ws['O8':'Z8']][0])
