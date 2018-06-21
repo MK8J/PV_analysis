@@ -43,6 +43,13 @@ def _voltage2conductance_quadratic(V, coil_constants):
 
     conductance = V**2 coil_constants[a] + V coil_constants[b] +
      coil_constants[c]
+
+    inputs:
+        V: (array like, in volts)
+            measured voltage
+        coil_constants: (dic)
+            coil constants, named a, b, and c as see in the equation above
+
     '''
 
     return V**2 * coil_constants['a'] + V * coil_constants['b'] +\
@@ -52,6 +59,24 @@ def _voltage2conductance_quadratic(V, coil_constants):
 def conductance2deltan(conductance, Na, Nd, thickness, mobility_sum, temp):
     '''
     returns the excess conductance for a sample
+
+    inputs:
+
+        conductance: (array like, semens)
+            The photocondutance. It should be corrected by the dark condutances
+        Na: (float, cm^-3)
+            The acceptor density.
+        Nd: (float, cm^-3)
+            The donar density.
+        thickness: (float, cm)
+            The thickness of the device
+        mobility_sum: (array like or string or None)
+            The mobility sum. This can either be values, a string corresponding to an mobility
+            author in the semiconductor module, or None. If not it uses the default model
+            from the semiconductor module.
+        temp: (float, kelvin)
+            The temperature
+
     '''
 
     if isinstance(mobility_sum, np.ndarray):
@@ -77,7 +102,7 @@ def _conductance2deltan_model(conductance, Na, Nd, thickness,
     nxc = 1e10 * np.ones(conductance.shape[0])
     i = 1
 
-    while (i > 0.001):
+    while (i > 0.0001):
         mobility_sum = Mobility(
         ).mobility_sum(nxc=nxc, Na=Na,
                        Nd=Nd, temp=temp, author=mobility_sum_author
@@ -91,6 +116,7 @@ def _conductance2deltan_model(conductance, Na, Nd, thickness,
         i = np.average(abs(_temp[index] - nxc[index]) / nxc[index])
 
         nxc = _temp
+    # return the value
     return nxc
 
 
@@ -162,7 +188,7 @@ class lifetime_QSSPC(LTC):
         self.gen = self.gen_V * self.Fs
 
         # then do lifetime
-        self._cal_lifetime(analysis=None)
+        self._cal_lifetime(analysis=analysis)
 
     @property
     def mobility_sum(self):
@@ -178,6 +204,7 @@ class lifetime_QSSPC(LTC):
     @mobility_sum.setter
     def mobility_sum(self, value):
         self.analysis_options['mobility_sum'] = value
+
 
 if __name__ == '__main__':
     print('ok')

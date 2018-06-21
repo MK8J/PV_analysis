@@ -186,9 +186,9 @@ def _Load_InfData_Python(file_path):
         s = f.read()
 
     s = re.sub('\n\n+', '\n', s)
-
     for i in s.split('\n')[2:-1]:
-        List[i.split(':\t')[0].strip()] = num(i.split(':\t')[1])
+        if len(i) > 1:
+            List[i.split(':\t')[0].strip()] = num(i.split(':\t')[1])
 
     return List
 

@@ -3,6 +3,8 @@ import sys
 import numpy as np
 import openpyxl as pyxl
 import scipy.constants as C
+import configparser as cp
+
 
 from PV_analysis.lifetime.QSSPC.core import lifetime_QSSPC as LTC
 
@@ -163,19 +165,25 @@ def extract_measurement_data(File_path, Plot=False):
     some more work
     This outputs the data as a structured array, with the names as the column
     '''
+    # if its an excle file
+    if '.xls' in File_path:
+        wb = pyxl.load_workbook(File_path, read_only=True, data_only=True)
+        # the command page was only added in the later versions
 
-    wb = pyxl.load_workbook(File_path, read_only=True, data_only=True)
-    # the command page was only added in the later versions
-    if 'Command' in wb.get_sheet_names():
-        data = _openpyxl_Sinton2014_ExtractRawDatadata(wb)
-    else:
-        try:
+        if 'Command' in wb.get_sheet_names():
             data = _openpyxl_Sinton2014_ExtractRawDatadata(wb)
-        except:
-            print('Can\'t load this file yet')
+        else:
+            try:
+                data = _openpyxl_Sinton2014_ExtractRawDatadata(wb)
+            except:
+                print('Can\'t load this file yet')
 
-    # remove all the nan values from the data
-    data = data[~np.isnan(data['Tau (sec)'])]
+        # remove all the nan values from the data
+        data = data[~np.isnan(data['Tau (sec)'])]
+
+    # if its from the labview version
+    elif '.ltr' in File_path:
+        data = _labview_sinton2017_extract_raw_data(File_path)
 
     # TODO
     # is this a place where I should filter the datas generation to make
@@ -193,15 +201,20 @@ def extract_info(File_path):
     This outputs the data as a structured array, with the names as the column
     '''
 
-    wb = pyxl.load_workbook(File_path, read_only=True, data_only=True)
-    # the command page was only added in the later versions
-    if 'Command' in wb.get_sheet_names():
-        settings = _openpylx_sinton2014_extractsserdata(wb)
-    else:
-        try:
+    # if its an excle file
+    if '.xls' in File_path:
+        wb = pyxl.load_workbook(File_path, read_only=True, data_only=True)
+        # the command page was only added in the later versions
+        if 'Command' in wb.get_sheet_names():
             settings = _openpylx_sinton2014_extractsserdata(wb)
-        except:
-            print('Can''t load this file yet')
+        else:
+            try:
+                settings = _openpylx_sinton2014_extractsserdata(wb)
+            except:
+                print('Can''t load this file yet')
+    # if its from the labview version
+    elif '.ltr' in File_path:
+        settings = _labview_sinton2017_extract_user_data(File_path)
 
     return settings
 
@@ -316,7 +329,7 @@ def _openpylx_sinton2014_setuserdata(wb, dic):
 
 def _float_or_none(value):
     try:
-        num = float(value)
+        num = float(value.strip('"'))
     except:
         num = None
     return num
@@ -377,6 +390,89 @@ def _openpylx_sinton2014_extractsserdata(wb):
     return user_set
 
 
+def _labview_sinton2017_extract_user_data(fname):
+    config = cp.ConfigParser()
+    config.read_file(open(fname))
+
+    # Grabbing the data and assigning it a nae
+
+    user_set = {
+        'name': config.get(
+            'User Inputs', 'Sample Parameters.Sample ID').strip('"'),
+        'thickness': _float_or_none(
+            config.get('User Inputs', 'Sample Parameters.Thickness (cm)')),
+        'resisitivity': _float_or_none(
+            config.get('User Inputs', 'Sample Parameters.Base Resistivity (ohm-cm)')),
+        'sample_type': config.get(
+            'User Inputs', 'Sample Parameters.Sample Type').strip('"').encode("utf-8"),
+        'analysis_mode': config.get(
+            'User Inputs', 'Analysis Parameters.Analysis Mode').strip('"'),
+        'optical_constant': _float_or_none(
+            config.get('User Inputs', 'Analysis Parameters.Optical Constant')),
+        'absorptance': _float_or_none(
+            config.get('User Inputs', 'Analysis Parameters.Optical Constant')),
+        'MCD': _float_or_none(
+            config.get('User Inputs', 'Analysis Parameters.Lifetime Spec MCD (cm-3)')),
+        'J0':  _float_or_none(
+            config.get('User Inputs', 'Analysis Parameters.Jo Spec MCD (cm-3)')),
+        'cell_apeture': config.get(
+            'User Inputs', 'Analysis Parameters.Ref Cell Aperture Setting').strip('"')
+    }
+
+    # makes a reference to the RawData page
+    sys_set = {
+        'A': _float_or_none(
+            config.get('Calibration Details', 'a')),
+        'B': _float_or_none(
+            config.get('Calibration Details', 'b')),
+        'C': _float_or_none(
+            config.get(
+                'Zero Instrument Details', 'Avg. Air Voltage')
+        ) - _float_or_none(
+            config.get('Calibration Details', 'offset \\3d air-c')),
+        'air_voltage': _float_or_none(
+            config.get('Zero Instrument Details', 'Avg. Air Voltage')),
+        'RefCell': _float_or_none(
+            config.get('Calibration Details', 'ref cell  (v/sun)')),
+        'Fit Range': _float_or_none(
+            config.get('Advanced Settings', 'Analysis Parameter Settings.Fit Range')),
+        'auger_model': config.get(
+            'Advanced Settings', 'Analysis Parameter Settings.Auger Model').strip('"'),
+    }
+
+    # make one dic
+    user_set.update(sys_set)
+
+    sys_set = {
+        'dark_voltage': _float_or_none(config.get('DAQ Output', 'Vdark'))
+    }
+
+    user_set.update(sys_set)
+
+    return user_set
+
+
+def _labview_sinton2017_extract_raw_data(fname):
+    config = cp.ConfigParser()
+    config.read_file(open(fname))
+
+    time = [float(i) for i in config.get(
+        'DAQ Output', 'Time').strip('"').split(' ')[1:]]
+    Ref = [float(i) for i in config.get(
+        'DAQ Output', 'Ref').strip('"').split(' ')[1:]]
+    PC = [float(i) for i in config.get(
+        'DAQ Output', 'PC').strip('"').split(' ')[1:]]
+
+    wtype = np.dtype(
+        [('Time in s', 'f8'), ('Photovoltage', 'f8'), ('Reference Voltage', 'f8')])
+    data = np.empty(len(time), dtype=wtype)
+    data['Time in s'] = time
+    data['Photovoltage'] = Ref
+    data['Reference Voltage'] = PC
+
+    return data
+
+
 def load_lifetime_sinton(file_path):
     '''
     Loads a Sinton excel and passes it into a lifetime class, with the
@@ -390,43 +486,50 @@ def load_lifetime_sinton(file_path):
     data = extract_measurement_data(file_path)
     inf = extract_info(file_path)
 
-    # pass to the lifetime class
-    ltc.sample.nxc = data['Minority Carrier Density']
-    ltc.tau = data['Tau (sec)']
-    ltc.gen = data['Generation (pairs/s)']
-    ltc.intrinsic_tau = 1. / (
-        1. / data['Tau (sec)'] -
-        data['1/Tau Corrected']
-    )
-
+    # add raw data
     ltc.time = data['Time in s']
     ltc.PC = data['Photovoltage'] + inf['dark_voltage']
-
-    # ltc.PC_test = data['Conductivity increase']
-
     ltc.dark_voltage = inf['dark_voltage']
     ltc.gen_V = data['Reference Voltage']
-    ltc.mobility_sum = data['Conductivity increase'] / \
-        data['Apparent CD'] / C.e / inf['thickness']
 
     ltc.coil_constants = {'a': inf.pop('A'),
                           'b': inf.pop('B'),
                           'c': inf.pop('C')}
 
-    # if there are real numbers for ni use them.
-    if not np.all(np.isnan(data['ni'])):
-        ltc.sample.ni_eff = data['ni']
-    else:
-        # values taken from the sinton file
-        # this is the same value for all versions
-        # to 2016.
-        ltc.sample.ni = np.sqrt(7.4e19)
-        # no BGN valued used
-        ltc.sample.ni_eff = 'None'
-
-    # sintons definition of Fs
     ltc.Fs = 0.038 / C.e / inf.pop('RefCell')
     ltc.sample.absorptance = inf.pop('optical_constant')
+
+    # pass externally calculated values
+    if 'Minority Carrier Density' in data.dtype.names:
+        ltc.sample.nxc = data['Minority Carrier Density']
+        ltc.tau = data['Tau (sec)']
+        ltc.gen = data['Generation (pairs/s)']
+        ltc.intrinsic_tau = 1. / (
+            1. / data['Tau (sec)'] -
+            data['1/Tau Corrected']
+        )
+
+        ltc.mobility_sum = data['Conductivity increase'] / \
+            data['Apparent CD'] / C.e / inf['thickness']
+    # if not cal them
+    else:
+        pass
+        # TODO: needs to calculate the doping to allow calculation of
+        # these values from the labview version
+
+    # if there are real numbers for ni use them.
+    if 'ni' in data.dtype.names:
+        if not np.all(np.isnan(data['ni'])):
+            ltc.sample.ni_eff = data['ni']
+        else:
+            # values taken from the sinton file
+            # this is the same value for all versions
+            # to 2016.
+            ltc.sample.ni = np.sqrt(7.4e19)
+            # no BGN valued used
+            ltc.sample.ni_eff = 'None'
+
+    # sintons definition of Fs
 
     if inf['sample_type'] == b'p-type':
         inf['dopant'] = 'boron'
@@ -473,8 +576,19 @@ def load_raw_voltages(file_path,
     return ltc
 
 
-def load_inf_UNSW(file_path, ltc_PC, method='python'):
-    settings = QSSPLIO.extract_info(file_path, method)
+def load_inf_UNSW(fname, ltc_PC, method='python'):
+    '''
+    inputs:
+
+        fname: (str)
+            location of the inf file
+        ltc_PC: (class)
+            A lifetime class instance for the values to be entered into
+        method: (str)
+            The method used to load it.
+
+    '''
+    settings = QSSPLIO.extract_info(fname, method)
 
     ltc_PC.coil_constants = {'a': settings['Quad'],
                              'b': settings['Lin'],
