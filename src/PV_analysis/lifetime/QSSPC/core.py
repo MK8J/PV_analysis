@@ -78,7 +78,6 @@ def conductance2deltan(conductance, Na, Nd, thickness, mobility_sum, temp):
             The temperature
 
     '''
-
     if isinstance(mobility_sum, np.ndarray):
         nxc = _conductance2deltan_array(conductance, thickness, mobility_sum)
 
@@ -163,12 +162,15 @@ class lifetime_QSSPC(LTC):
 
         # background correct the data, generation and conductance
         if dark_voltage:
+            print(self.sample.nxc[-1])
             self.sample.nxc -= voltage2conductance(
                 voltage=dark_voltage, coil_constants=self.coil_constants,
                 method=self.calibration_method)
+            print(self.sample.nxc[-1])
 
         else:
-
+            print('here isntead')
+            # this does not do anyhting
             self.sample.nxc = self._bg_correct(self.sample.nxc)
 
         self.gen_V = self._bg_correct(self.gen_V)

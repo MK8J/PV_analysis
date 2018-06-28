@@ -4,7 +4,7 @@ import numpy as np
 import openpyxl as pyxl
 import scipy.constants as C
 import configparser as cp
-
+import re
 
 from PV_analysis.lifetime.QSSPC.core import lifetime_QSSPC as LTC
 
@@ -392,10 +392,17 @@ def _openpylx_sinton2014_extractsserdata(wb):
 
 def _labview_sinton2017_extract_user_data(fname):
     config = cp.ConfigParser()
-    config.read_file(open(fname))
+
+    with open(fname, 'rb') as f:
+        s = f.read()
+
+    s = re.sub(b'Meas Time.*', b'', s)
+    s = re.sub(b'Time of Last Instrument.*', b'', s)
+    s = s.decode("utf-8")
+
+    config.read_string(s)
 
     # Grabbing the data and assigning it a nae
-
     user_set = {
         'name': config.get(
             'User Inputs', 'Sample Parameters.Sample ID').strip('"'),
@@ -415,8 +422,8 @@ def _labview_sinton2017_extract_user_data(fname):
             config.get('User Inputs', 'Analysis Parameters.Lifetime Spec MCD (cm-3)')),
         'J0':  _float_or_none(
             config.get('User Inputs', 'Analysis Parameters.Jo Spec MCD (cm-3)')),
-        'cell_apeture': config.get(
-            'User Inputs', 'Analysis Parameters.Ref Cell Aperture Setting').strip('"')
+        # 'cell_apeture': config.get(
+        #     'User Inputs', 'Analysis Parameters.Ref Cell Aperture Setting').strip('"')
     }
 
     # makes a reference to the RawData page
@@ -454,7 +461,13 @@ def _labview_sinton2017_extract_user_data(fname):
 
 def _labview_sinton2017_extract_raw_data(fname):
     config = cp.ConfigParser()
-    config.read_file(open(fname))
+    with open(fname, 'rb') as f:
+        s = f.read()
+    s = re.sub(b'Meas Time.*', b'', s)
+    s = re.sub(b'Time of Last Instrument.*', b'', s)
+    s = s.decode("utf-8")
+
+    config.read_string(s)
 
     time = [float(i) for i in config.get(
         'DAQ Output', 'Time').strip('"').split(' ')[1:]]
@@ -467,8 +480,8 @@ def _labview_sinton2017_extract_raw_data(fname):
         [('Time in s', 'f8'), ('Photovoltage', 'f8'), ('Reference Voltage', 'f8')])
     data = np.empty(len(time), dtype=wtype)
     data['Time in s'] = time
-    data['Photovoltage'] = Ref
-    data['Reference Voltage'] = PC
+    data['Photovoltage'] = PC
+    data['Reference Voltage'] = Ref
 
     return data
 

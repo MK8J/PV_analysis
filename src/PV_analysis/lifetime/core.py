@@ -125,7 +125,7 @@ class lifetime():
     # material properties/analysis options
     analysis_options = {
         'analysis': 'generalised',
-        'bgc_side': 'front',
+        'bgc_side': 'start',
         'bgc_type': 'points',
         'bgc_value': 100,
         'ni': None,
