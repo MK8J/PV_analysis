@@ -48,6 +48,21 @@ def dQscr(V, time, doping, esp=11.7, phi=1.1):
 
 
 class lifetime_Voc(LTC):
+    '''
+
+    this class can be used for
+
+    a) self consisent QSSVoc analysis
+    b) lifetime from suns Voc
+    c) genralised Voc analysis.
+
+    Inptuts:
+        1. sample, doping
+        2. thickness
+        2. Generation. This is provided in gen_V and Fs
+        3. time in seconts (time)
+        4. Voltage (V)
+    '''
 
     # raw measurements
     V = None

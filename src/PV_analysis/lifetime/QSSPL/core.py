@@ -56,6 +56,9 @@ class lifetime_PL(LTC):
 
     _type = 'PL'
 
+    gain_pl = None
+    gain_gen = None
+
     def __init__(self, **kwargs):
         super(**kwargs).__init__()
 
@@ -63,11 +66,11 @@ class lifetime_PL(LTC):
 
         # background correct the data
         self.I_PL = self._bg_correct(self.I_PL)
-        self.gen_V = self._bg_correct(self.gen_V)
+        self.gen_V = self._bg_correct(self.gen_V)  # * gain_gen
 
         # get dn
         self.sample.nxc = PL_2_deltan(
-            PL=self.I_PL, Na=self.sample.Na, Nd=self.sample.Nd, Ai=self.Ai,
+            PL=self.I_PL, Na=self.sample.Na, Nd=self.sample.Nd, Ai=self.Ai * gain_pl,
             temp=self.sample.temp)
 
         # get gen

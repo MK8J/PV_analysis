@@ -53,9 +53,9 @@ def murphy_plot(nxc, tau_ext, ax, label=None):
     ax.set_ylabel('$\tau_{eff}$ (s)')
 
 
-def caltau_generalised(nxc, gen, time, other=0):
+def gen_generalised(nxc, gen, time, other=0):
     '''
-    caculates the lifetime with the generatlised method
+    caculates the generation assuming the generatlised method
     inputs:
         nxc: (array like (cm^-3))
             number of excess carrier density
@@ -71,12 +71,12 @@ def caltau_generalised(nxc, gen, time, other=0):
 
     dndt = np.gradient(nxc, time[2] - time[1])
 
-    return nxc / (gen - dndt - other)
+    return gen - dndt - other
 
 
-def caltau_steadystate(nxc, gen, **kargs):
+def gen_steadystate(gen, **kargs):
     '''
-    caculates the lifetime with the generatlised method
+    caculates the generation assuming the steady state
     inputs:
         nxc: (array like (cm^-3))
             number of excess carrier density
@@ -87,12 +87,12 @@ def caltau_steadystate(nxc, gen, **kargs):
             the effective lifetime in secondsds
     '''
 
-    return nxc / (gen)
+    return gen
 
 
-def caltau_transient(nxc, time, **kargs):
+def gen_transient(nxc, time, **kargs):
     '''
-    caculates the lifetime using the assuming a transient
+    caculates the generation assuming a transient
     inputs:
         nxc: (array like (cm^-3))
             number of excess carrier density
@@ -106,7 +106,7 @@ def caltau_transient(nxc, time, **kargs):
 
     dndt = np.gradient(nxc, time)
 
-    return nxc / (dndt)
+    return -dndt
 
 
 class lifetime():
@@ -137,17 +137,17 @@ class lifetime():
     }
 
     _analsis_methods_dic = {
-        'generalised': caltau_generalised,
-        'transient': caltau_transient,
-        'steadystate': caltau_steadystate,
+        'generalised': gen_generalised,
+        'transient': gen_transient,
+        'steadystate': gen_steadystate,
     }
 
     _warnings = True
     _type = ''  # a saving extension
 
     def __init__(self, **kwargs):
-        self.attrs = kwargs
         self.sample = sample()
+        self.attrs = kwargs
         pass
 
     def _bg_correct(self, data):
@@ -157,22 +157,30 @@ class lifetime():
             self.analysis_options['bgc_type'],
             self.analysis_options['bgc_side'])
 
-    def _cal_lifetime(self, analysis=None, other=0):
+    def _cal_lifetime(self, analysis=None):
         self.analysis_options[
             'analysis'] = analysis or self.analysis_options['analysis']
 
-        self.tau = self._analsis_methods_dic[self.analysis_options['analysis']](
+        self.tau = self.sample.nxc / self.generation
+
+    @property
+    def generation(self):
+        '''
+        returns the generation rate
+        '''
+        return self._analsis_methods_dic[self.analysis_options['analysis']](
             nxc=self.sample.nxc,
             gen=self.gen * self.sample.absorptance / (
-                self.sample.thickness
-            ), time=self.time, other=other)
+                self.sample.thickness),
+            time=self.time,
+            other=0)
 
     @property
     def iVoc(self):
         '''
         returns the open circuit voltage of the device
         '''
-        return const.k * self.sample.temp / const.e * np.log(
+        return C.k * self.sample.temp / C.e * np.log(
             self.sample.nxc *
             (self.sample.nxc + self.sample.doping) / self.sample.ni_eff**2)
 

@@ -162,17 +162,16 @@ class lifetime_QSSPC(LTC):
 
         # background correct the data, generation and conductance
         if dark_voltage:
-            print(self.sample.nxc[-1])
             self.sample.nxc -= voltage2conductance(
                 voltage=dark_voltage, coil_constants=self.coil_constants,
                 method=self.calibration_method)
-            print(self.sample.nxc[-1])
 
         else:
-            print('here isntead')
             # this does not do anyhting
+            print('here', self.sample.nxc[-1])
             self.sample.nxc = self._bg_correct(self.sample.nxc)
 
+            print('here', self.sample.nxc[-1])
         self.gen_V = self._bg_correct(self.gen_V)
 
         # get nxc
@@ -183,8 +182,20 @@ class lifetime_QSSPC(LTC):
             temp=self.sample.temp)
 
     def cal_lifetime(self, analysis=None, dark_voltage=None):
+        '''
+        Calculates the lifetime from the measure voltages.
+
+        inputs:
+            analysis: (str, optional)
+                the method of analysis. Options include: generalised,        transient, and steadystate
+            dark_voltage: (float, optional)
+                Provides the opturnity to updated the assigned dark_voltage value. If dark_voltage was never assigned the PC data is background subtracted.
+
+        '''
         # get conductance
-        self._cal_nxc(dark_voltage)
+        # use the provided dark voltage, or the already assigned
+        self.dark_voltage = dark_voltage or self.dark_voltage
+        self._cal_nxc(self.dark_voltage)
 
         # get gen
         self.gen = self.gen_V * self.Fs

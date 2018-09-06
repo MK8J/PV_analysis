@@ -426,7 +426,7 @@ def _labview_sinton2017_extract_user_data(fname):
         #     'User Inputs', 'Analysis Parameters.Ref Cell Aperture Setting').strip('"')
     }
 
-    # makes a reference to the RawData page
+    # extracts all the measurement and system settings
     sys_set = {
         'A': _float_or_none(
             config.get('Calibration Details', 'a')),
@@ -504,6 +504,10 @@ def load_lifetime_sinton(file_path):
     ltc.PC = data['Photovoltage'] + inf['dark_voltage']
     ltc.dark_voltage = inf['dark_voltage']
     ltc.gen_V = data['Reference Voltage']
+
+    ltc.analysis_options['bgc_side'] = 'end'
+    ltc.analysis_options['bgc_value'] = 10
+    ltc.analysis_options['bgc_type'] = 'points'
 
     ltc.coil_constants = {'a': inf.pop('A'),
                           'b': inf.pop('B'),
