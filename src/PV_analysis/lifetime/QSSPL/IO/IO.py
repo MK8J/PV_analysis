@@ -4,6 +4,7 @@ import os
 import numpy as np
 from PV_analysis.lifetime.QSSPL.core import lifetime_PL
 import re
+import yaml
 
 
 def load(file_path):
@@ -38,18 +39,36 @@ def load(file_path):
         # try:
         tau_PL._m_settings = extract_info(file_inf, method)
 
-        try:
-            tau_PL.sample.temp = tau_PL._m_settings['Temp']
+        tau_PL._m_settings = {
+            k.lower(): v for k, v in tau_PL._m_settings.items()}
 
-            tau_PL.sample.dopant_type = tau_PL._m_settings['Type'] + '-type'
+        # try and pring info across to the class
+        if 'temp' in tau_PL._m_settings.keys():
+            tau_PL.sample.temp = tau_PL._m_settings['temp']
+        if 'type' in tau_PL._m_settings.keys():
+            tau_PL.sample.dopant_type = tau_PL._m_settings['type'] + '-type'
+            if 'doping' in tau_PL._m_settings.keys():
+                tau_PL.sample.doping = tau_PL._m_settings['doping']
+        if 'reflection' in tau_PL._m_settings.keys():
             tau_PL.sample.absorptance = 1. - \
-                tau_PL._m_settings['Reflection'] / 100.
-            tau_PL.Fs = tau_PL._m_settings['Fs']
-            tau_PL.Ai = tau_PL._m_settings['Ai']
-            tau_PL.sample.thickness = tau_PL._m_settings['Thickness']
-            tau_PL.sample.doping = tau_PL._m_settings['Doping']
-        except:
-            print('Error in loading inf PL\'s inf file')
+                tau_PL._m_settings['reflection'] / 100.
+        if 'fs' in tau_PL._m_settings.keys():
+            tau_PL.Fs = tau_PL._m_settings['fs']
+        if 'ai' in tau_PL._m_settings.keys():
+            tau_PL.Ai = tau_PL._m_settings['ai']
+        if 'thickness' in tau_PL._m_settings.keys():
+            tau_PL.sample.thickness = tau_PL._m_settings['thickness']
+        if 'pl_gain' in tau_PL._m_settings.keys():
+            tau_PL.sample.gain_pl = tau_PL._m_settings['pl_gain']
+        if 'gain' in tau_PL._m_settings.keys():
+            tau_PL.sample.gain_pl = tau_PL._m_settings['gain_pl']
+        if 'gen_gain' in tau_PL._m_settings.keys():
+            tau_PL.sample.gain_gen = tau_PL._m_settings['gen_gain']
+        if 'gain_gen' in tau_PL._m_settings.keys():
+            tau_PL.sample.gain_gen = tau_PL._m_settings['gain_gen']
+
+        # except:
+            # print('Error in loading inf PL\'s inf file')
     return tau_PL
 
 
@@ -179,16 +198,18 @@ def _Load_RawData_Python(file_path):
 
 
 def _Load_InfData_Python(file_path):
-
-    List = {}
+    '''
+    loads an inf file assuming yaml formatting.
+    '''
 
     with open(file_path, 'r') as f:
         s = f.read()
 
-    s = re.sub('\n\n+', '\n', s)
-    for i in s.split('\n')[2:-1]:
-        if len(i) > 1:
-            List[i.split(':\t')[0].strip()] = num(i.split(':\t')[1])
+    with open(file_path, 'r') as f:
+        s = f.readline()
+        s = f.read()
+    s = s.replace('\t', ' ')
+    List = yaml.load(s)
 
     return List
 

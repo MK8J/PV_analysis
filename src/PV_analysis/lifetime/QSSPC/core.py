@@ -7,7 +7,7 @@ from PV_analysis.lifetime.core import lifetime as LTC
 
 def voltage2conductance(voltage, coil_constants, method='quad'):
     '''
-    converts a voltage from a coil into a measured condutances
+    converts a meaured voltage into a measured sheet condutance
 
     inputs:
         voltage: (np array)
@@ -20,10 +20,18 @@ def voltage2conductance(voltage, coil_constants, method='quad'):
 
     convertion = {
         'sinton': _voltage2conductance_sinton,
-        'quad': _voltage2conductance_quadratic
+        'quad': _voltage2conductance_quadratic,
+        # 'contacted': _voltage2conductance_contacted
     }
 
     return convertion[method](voltage, coil_constants)
+
+
+def _voltage2sheetconductance_contacted(voltage, current, width, length):
+    '''
+    '''
+
+    return length / width * current / voltage
 
 
 def _voltage2conductance_sinton(V, coil_constants):

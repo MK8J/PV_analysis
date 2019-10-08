@@ -5,6 +5,7 @@ import openpyxl as pyxl
 import scipy.constants as C
 import configparser as cp
 import re
+import numbers
 
 from PV_analysis.lifetime.QSSPC.core import lifetime_QSSPC as LTC
 
@@ -328,9 +329,16 @@ def _openpylx_sinton2014_setuserdata(wb, dic):
 
 
 def _float_or_none(value):
-    try:
-        num = float(value.strip('"'))
-    except:
+
+    if isinstance(value, numbers.Number):
+        num = float(value)
+
+    elif type(value) == str:
+        try:
+            num = float(value.strip('"'))
+        except:
+            num = None
+    else:
         num = None
     return num
 
@@ -345,7 +353,6 @@ def _openpylx_sinton2014_extractsserdata(wb):
     ws = wb.get_sheet_by_name('User')
 
     # Grabbing the data and assigning it a nae
-
     user_set = {
         'name': ws['A6'].value,
         'thickness': _float_or_none(ws['B6'].value),
@@ -521,12 +528,18 @@ def load_lifetime_sinton(file_path):
         ltc.sample.nxc = data['Minority Carrier Density']
         ltc.tau = data['Tau (sec)']
         ltc.gen = data['Generation (pairs/s)']
-        ltc.intrinsic_tau = 1. / (
-            1. / data['Tau (sec)'] -
-            data['1/Tau Corrected']
+
+        ltc.intrinsic_tau = np.inf * np.zeros(data['Tau (sec)'].shape[0])
+
+        index = np.isclose(data['Tau (sec)'], 0)
+        index *= 1 / data['Tau (sec)'] == data['1/Tau Corrected']
+
+        ltc.intrinsic_tau[~index] = 1. / (
+            1. / data['Tau (sec)'][~index] -
+            data['1/Tau Corrected'][~index]
         )
 
-        ltc.mobility_sum = data['Conductivity increase'] / \
+        ltc.mobility_sum = data['Conductivity increase'] /\
             data['Apparent CD'] / C.e / inf['thickness']
     # if not cal them
     else:

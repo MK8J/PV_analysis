@@ -43,6 +43,18 @@ def PL_2_deltan(PL, Na, Nd, Ai, temp):
 
 
 class lifetime_PL(LTC):
+    '''
+    lifetime class for luminescence based measurements.
+
+    inputs:
+
+        fs
+        Ai
+        I_PL
+        gen_V
+        gain_PL
+        gain_gen
+    '''
 
     # measurement settings
     _m_settings = None
@@ -60,6 +72,16 @@ class lifetime_PL(LTC):
     gain_gen = None
 
     def __init__(self, **kwargs):
+        '''
+        inputs:
+
+            fs
+            Ai
+            I_PL
+            gen_V
+            gain_PL
+            gain_gen
+        '''
         super(**kwargs).__init__()
 
     def cal_lifetime(self, analysis=None):
@@ -70,10 +92,10 @@ class lifetime_PL(LTC):
 
         # get dn
         self.sample.nxc = PL_2_deltan(
-            PL=self.I_PL, Na=self.sample.Na, Nd=self.sample.Nd, Ai=self.Ai * gain_pl,
+            PL=self.I_PL, Na=self.sample.Na, Nd=self.sample.Nd, Ai=self.Ai / self.gain_pl,
             temp=self.sample.temp)
 
         # get gen
-        self.gen = self.gen_V * self.Fs
+        self.gen = self.gen_V * self.Fs / self.gain_gen
         # then do lifetime
         self._cal_lifetime(analysis=None)

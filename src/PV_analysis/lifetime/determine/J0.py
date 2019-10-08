@@ -6,7 +6,7 @@ import matplotlib.pylab as plt
 
 def J0(nxc, tau, thickness, ni, method, ret_all=False, res=False,  ** kwargs):
     '''
-    Caculates Jo from the measurement from a lifetime measurement
+    Caculates Jo from the measurement from a lifetime measurement. The 
     inputs:
         nxc: (numpy array)
             number of excess carriers (cm^-3)
@@ -18,7 +18,11 @@ def J0(nxc, tau, thickness, ni, method, ret_all=False, res=False,  ** kwargs):
             the intrinsic carrier density, or effective intrinsic carrier
             density
         method: (str)
-            one of the implimented methods
+            one of the implimented methods being: 'kane&swanson', 'king', 'Blum_BGN', 'Kimmerle_SRH', or 'Kimmerle_Diffusion'.
+        ret_all: (bool, default =False)
+            Set true to also return nxc_cor, inverse lifetime, and the residuals.
+        res: (bool, default=False)
+            Set true to also return the residuals
         kwargs: (optional)
             additional arguments required by some methods
     '''
@@ -68,7 +72,7 @@ def _J0_Kimmerle_Diffusion(
             _J0, nxc_corr, itau, residuals = _J0_KaneSwanson(
                 nxc, (tau_cor - thickness**2 / D_ambi / np.pi**2) / ni_eff**2, thickness, 1)
         else:
-            tau_cor = 1.  / \
+            tau_cor = 1. / \
                 (1. / tau - 1. / tau_aug - 1. / tau_SRH)
             _J0, nxc_corr, itau, residuals = _J0_KaneSwanson(
                 nxc, (tau_cor - thickness**2 / D_ambi / np.pi**2) / ni_eff**2, thickness, 1)
